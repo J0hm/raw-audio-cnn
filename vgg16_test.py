@@ -12,7 +12,7 @@ from torchaudio.datasets import SPEECHCOMMANDS
 import os
 
 # ----- HYPERPARAMETERS -----
-batch_size = 16
+batch_size = 16 # might need to change this back to 256
 new_sample_rate = 8000
 num_epochs = 16 
 learning_rate = 0.005
