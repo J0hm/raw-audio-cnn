@@ -18,6 +18,11 @@ num_epochs = 16
 learning_rate = 0.005
 # ---------------------------
 
+
+
+# -----------------------------
+# ----- BEGIN DATA SECTION ----
+# -----------------------------
 class SubsetSC(SPEECHCOMMANDS):
     def __init__(self, subset):
         super().__init__("./", download=True)
@@ -99,6 +104,12 @@ test_loader = torch.utils.data.DataLoader(
     pin_memory=pin_memory
 )
 
+
+
+# -------------------------------
+# ----- BEGIN TRAIN SECTION -----
+# -------------------------------
+
 # this is a moderately modified implementation of torchvisions own torchvision.model.VGG16
 class VGG16(nn.Module):
     def __init__(self, n_input=1, n_output=35, stride=16, n_channel=32):
@@ -148,6 +159,7 @@ class VGG16(nn.Module):
         )
 
         self.classifier = nn.Sequential(
+            # *7? TODO check this works for other channel sizes
             nn.Linear(8*n_channel*7, 32*n_channel),
             nn.ReLU(),
             nn.Dropout(),
@@ -185,7 +197,6 @@ print("Number of parameters: {}".format(n))
 
 criterion = nn.CrossEntropyLoss()
 optimizer = torch.optim.SGD(model.parameters(), lr=learning_rate, weight_decay=0.005, momentum=0.9)
-total_step = len(train_loader)
 
 def train(model, epoch, log_interval):
     model.train()
@@ -232,10 +243,11 @@ def test(model, epoch):
 
         pred = get_likely_index(output)
         correct += number_of_correct(pred, target)
-
+    # TODO low priority fix this logging so it doesnt show errors.
+    # it runs fine, but pyright doesnt like it + messy and confusing
     print(f"\nTest Epoch: {epoch}\tAccuracy: {correct}/{len(test_loader.dataset)} ({100. * correct / len(test_loader.dataset):.0f}%)\n")
 
-
+# print status every log_interval iterations
 log_interval = 50
 
 # The transform needs to live on the same device as the model and the data.
