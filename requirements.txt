@@ -1,0 +1,8 @@
+tensorflow==2.13.0
+torchaudio
+torchvision
+librosa
+numpy
+matplotlib
+tqdm
+pandas
