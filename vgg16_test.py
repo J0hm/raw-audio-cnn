@@ -14,8 +14,9 @@ import os
 # ----- HYPERPARAMETERS -----
 batch_size = 16 # might need to change this back to 256
 new_sample_rate = 8000
+n_channel = 32
 num_epochs = 16 
-learning_rate = 0.005
+learning_rate = 0.005 # 0.001 in original network
 # ---------------------------
 
 
@@ -185,7 +186,7 @@ class VGG16(nn.Module):
         return x
 
 
-model = VGG16(n_input=transformed.shape[0], n_output = len(labels))
+model = VGG16(n_input=transformed.shape[0], n_output = len(labels), n_channel=n_channel)
 model.to(device)
 print(model)
 
