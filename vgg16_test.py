@@ -12,9 +12,9 @@ from torchaudio.datasets import SPEECHCOMMANDS
 import os
 
 # ----- HYPERPARAMETERS -----
-batch_size = 16 # might need to change this back to 256
+batch_size = 256 # might need to change this back to 256
 new_sample_rate = 8000
-n_channel = 32
+n_channel = 64
 num_epochs = 16 
 learning_rate = 0.005 # 0.001 in original network
 # ---------------------------
@@ -113,7 +113,7 @@ test_loader = torch.utils.data.DataLoader(
 
 # this is a moderately modified implementation of torchvisions own torchvision.model.VGG16
 class VGG16(nn.Module):
-    def __init__(self, n_input=1, n_output=35, stride=16, n_channel=32):
+    def __init__(self, n_input=1, n_output=35, n_channel=32):
         super().__init__()
 
         self.features = nn.Sequential(
@@ -249,7 +249,7 @@ def test(model, epoch):
     print(f"\nTest Epoch: {epoch}\tAccuracy: {correct}/{len(test_loader.dataset)} ({100. * correct / len(test_loader.dataset):.0f}%)\n")
 
 # print status every log_interval iterations
-log_interval = 50
+log_interval = 1
 
 # The transform needs to live on the same device as the model and the data.
 transform = transform.to(device)
