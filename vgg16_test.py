@@ -112,8 +112,9 @@ test_loader = torch.utils.data.DataLoader(
 # -------------------------------
 # ----- BEGIN TRAIN SECTION -----
 # -------------------------------
+def count_params(model):
+    return sum(p.numel() for p in model.parameters() if p.requires_grad)
 
-# this is a moderately modified implementation of torchvisions own torchvision.model.VGG16
 def conv_layer(chann_in, chann_out, k_size, p_size):
     layer = nn.Sequential(
         nn.Conv1d(chann_in, chann_out, kernel_size=k_size, padding=p_size),
@@ -136,7 +137,7 @@ def vgg_fc_layer(size_in, size_out):
     )
     return layer
 
-
+# this is a moderately modified implementation of torchvisions own torchvision.model.VGG16
 class VGG16(nn.Module):
     def __init__(self, n_input=1, n_output=35, n_channel=32):
         super().__init__()
@@ -164,7 +165,9 @@ class VGG16(nn.Module):
         out = self.layer3(out)
         out = self.layer4(out)
         out = self.layer5(out)
-
+        
+        # we change the view here to have the output be the right shape for linear layers
+        # something like [256, 256, 7] -> [256, 1792]
         out = out.view(out.size()[0], -1)
 
         out = self.layer6(out)
@@ -178,21 +181,17 @@ model = VGG16(n_input=transformed.shape[0], n_output = len(labels), n_channel=n_
 model.to(device)
 print(model)
 
-def count_params(model):
-    return sum(p.numel() for p in model.parameters() if p.requires_grad)
-
 n = count_params(model)
 print("Number of parameters: {}".format(n))
 
 criterion = nn.CrossEntropyLoss()
-optimizer = torch.optim.SGD(model.parameters(), lr=learning_rate, weight_decay=0.001, momentum=0.9)
+optimizer = torch.optim.SGD(model.parameters(), lr=learning_rate, weight_decay=0.001, momentum=0.9) # TODO test with Adam
 scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer, verbose=True)
 
 def train(model, epoch, log_interval):
     model.train()
 
     total_loss = 0
-    count = 0
 
     for batch_idx, (data, target) in enumerate(tqdm(train_loader)):
         data = data.to(device)
@@ -204,7 +203,6 @@ def train(model, epoch, log_interval):
 
         loss = criterion(output.squeeze(), target) # is squeeze necessary? might not be if there are no dimensions of size 1
         total_loss += loss.data
-        count += 1
 
         optimizer.zero_grad()
         loss.backward()
@@ -216,16 +214,13 @@ def train(model, epoch, log_interval):
 
     scheduler.step(total_loss)
 
-
 def number_of_correct(pred, target):
     # count number of correct predictions
     return pred.squeeze().eq(target).sum().item()
 
-
 def get_likely_index(tensor):
     # find most likely label index for each element in the batch
     return tensor.argmax(dim=-1)
-
 
 def test(model, epoch):
     model.eval()
@@ -233,7 +228,6 @@ def test(model, epoch):
     counts = numpy.zeros(35, dtype = int)
 
     for data, target in test_loader:
-
         data = data.to(device)
         target = target.to(device)
 
@@ -249,13 +243,10 @@ def test(model, epoch):
 
     print("Predicted label counts:", counts)
 
-    # TODO low priority fix this logging so it doesnt show errors.
-    # it runs fine, but pyright doesnt like it + messy and confusing
     print(f"\nTest Epoch: {epoch}\tAccuracy: {correct}/{len(test_loader.dataset)} ({100. * correct / len(test_loader.dataset):.0f}%)\n")
 
 # print status every log_interval iterations
 log_interval = 10
-
 
 # The transform needs to live on the same device as the model and the data.
 transform = transform.to(device)
