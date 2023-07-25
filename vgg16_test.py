@@ -181,8 +181,11 @@ class VGG16(nn.Module):
             else:
                 x = layer(x)
         
+        print("Shape before view and classifer:", x.shape)
         x = x.view(x.size()[0], -1)
+        print("Shape after view:", x.shape)
         x = self.classifier(x)
+        print("Shape after classifier:", x.shape)
         return x
 
 
