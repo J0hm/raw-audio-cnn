@@ -3,7 +3,6 @@ import torch.utils.data.dataloader
 import torch.nn as nn
 import torchaudio
 import numpy
-from collections import OrderedDict
 from tqdm import tqdm
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -12,15 +11,18 @@ print("Running on {}".format(device))
 from torchaudio.datasets import SPEECHCOMMANDS
 import os
 
-# ----- HYPERPARAMETERS -----
-batch_size = 256 # might need to change this back to 256
+# ---------- HYPERPARAMETERS ----------
+batch_size = 256
 num_classes = 35
 new_sample_rate = 8000
-n_channel = 64
-num_epochs = 16
+n_channel = 1
+num_epochs = 5
 learning_rate = 0.01 # 0.001 in original network
-# ---------------------------
 
+# brief testing shows that no class balancing converges faster. why? perhaps a flawed implementation?
+# it does, however, prevent classes from having 0 predictions in the first few epochs, so it seems like its doing something right
+use_class_weights = False 
+# ------------------------------------
 
 
 # -----------------------------
@@ -82,6 +84,19 @@ def collate_fn(batch):
 
     return tensors, targets
 
+def get_weights():
+    print("Calculating weights...")
+    weights = torch.zeros(num_classes, dtype=torch.long)
+    for _, (_, target) in enumerate(tqdm(train_loader)):
+        for label in target:
+            weights[label] += 1
+
+    weights = torch.max(weights)/weights 
+
+    print("Using wieghts:", weights)
+    return weights
+
+
 if device == "cuda":
     num_workers = 1
     pin_memory = True
@@ -133,8 +148,10 @@ def vgg_fc_layer(size_in, size_out):
     layer = nn.Sequential(
         nn.Linear(size_in, size_out),
         nn.BatchNorm1d(size_out),
-        nn.ReLU()
+        nn.ReLU(),
+        #nn.Dropout() # TODO dropout testing
     )
+
     return layer
 
 # this is a moderately modified implementation of torchvisions own torchvision.model.VGG16
@@ -185,6 +202,11 @@ n = count_params(model)
 print("Number of parameters: {}".format(n))
 
 criterion = nn.CrossEntropyLoss()
+
+if(use_class_weights):
+    weights = get_weights()
+    criterion = nn.CrossEntropyLoss(weight=weights)
+
 optimizer = torch.optim.SGD(model.parameters(), lr=learning_rate, weight_decay=0.001, momentum=0.9) # TODO test with Adam
 scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer, verbose=True)
 
