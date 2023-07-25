@@ -2,6 +2,7 @@ import torch
 import torch.utils.data.dataloader
 import torch.nn as nn
 import torchaudio
+import numpy
 from collections import OrderedDict
 from tqdm import tqdm
 
@@ -13,10 +14,11 @@ import os
 
 # ----- HYPERPARAMETERS -----
 batch_size = 256 # might need to change this back to 256
+num_classes = 35
 new_sample_rate = 8000
 n_channel = 64
-num_epochs = 16 
-learning_rate = 0.005 # 0.001 in original network
+num_epochs = 16
+learning_rate = 0.01 # 0.001 in original network
 # ---------------------------
 
 
@@ -69,7 +71,7 @@ def pad_sequence(batch):
 
 def collate_fn(batch):
     tensors, targets = [], []
-    
+
     # encode labels as indices
     for waveform, _, label, *_ in batch:
         tensors += [waveform]
@@ -112,81 +114,64 @@ test_loader = torch.utils.data.DataLoader(
 # -------------------------------
 
 # this is a moderately modified implementation of torchvisions own torchvision.model.VGG16
+def conv_layer(chann_in, chann_out, k_size, p_size):
+    layer = nn.Sequential(
+        nn.Conv1d(chann_in, chann_out, kernel_size=k_size, padding=p_size),
+        nn.BatchNorm1d(chann_out),
+        nn.ReLU()
+    )
+    return layer
+
+def vgg_conv_block(in_list, out_list, k_list, p_list, pooling_k, pooling_s):
+
+    layers = [ conv_layer(in_list[i], out_list[i], k_list[i], p_list[i]) for i in range(len(in_list)) ]
+    layers += [ nn.MaxPool1d(kernel_size = pooling_k, stride = pooling_s)]
+    return nn.Sequential(*layers)
+
+def vgg_fc_layer(size_in, size_out):
+    layer = nn.Sequential(
+        nn.Linear(size_in, size_out),
+        nn.BatchNorm1d(size_out),
+        nn.ReLU()
+    )
+    return layer
+
+
 class VGG16(nn.Module):
     def __init__(self, n_input=1, n_output=35, n_channel=32):
         super().__init__()
 
-        self.features = nn.Sequential(
-            # conv1
-            nn.Conv1d(n_input, n_channel, kernel_size=80, padding=1),
-            nn.ReLU(),
-            nn.Conv1d(n_channel, n_channel, kernel_size=80, padding=1), # kernel = 3?
-            nn.ReLU(),
-            nn.MaxPool1d(4, return_indices=True),
+        super(VGG16, self).__init__()
 
-            # conv2
-            nn.Conv1d(n_channel, 2*n_channel, kernel_size=3, padding=1),
-            nn.ReLU(),
-            nn.Conv1d(2*n_channel, 2*n_channel, kernel_size=3, padding=1),
-            nn.ReLU(),
-            nn.MaxPool1d(4, return_indices=True),
+        # Conv blocks (BatchNorm + ReLU activation added in each block)
+        self.layer1 = vgg_conv_block([n_input,n_channel], [n_channel,n_channel], [80,3], [1,1], 4, 4)
+        self.layer2 = vgg_conv_block([n_channel,2*n_channel], [2*n_channel,2*n_channel], [3,3], [1,1], 4, 4)
+        self.layer3 = vgg_conv_block([2*n_channel,4*n_channel,4*n_channel], [4*n_channel,4*n_channel,4*n_channel], [3,3,3], [1,1,1], 4, 4)
+        self.layer4 = vgg_conv_block([4*n_channel,8*n_channel,8*n_channel], [8*n_channel,8*n_channel,8*n_channel], [3,3,3], [1,1,1], 4, 4)
+        self.layer5 = vgg_conv_block([8*n_channel,8*n_channel,8*n_channel], [8*n_channel,8*n_channel,8*n_channel], [3,3,3], [1,1,1], 4, 4)
 
-            # conv3
-            nn.Conv1d(2*n_channel, 4*n_channel, kernel_size=3, padding=1),
-            nn.ReLU(),
-            nn.Conv1d(4*n_channel, 4*n_channel, kernel_size=3, padding=1),
-            nn.ReLU(),
-            nn.Conv1d(4*n_channel, 4*n_channel, kernel_size=3, padding=1),
-            nn.ReLU(),
-            nn.MaxPool1d(4, return_indices=True),
+        # FC layers
+        self.layer6 = vgg_fc_layer(8*n_channel*7, 64*n_channel)
+        self.layer7 = vgg_fc_layer(64*n_channel, 64*n_channel)
 
-            # conv4
-            nn.Conv1d(4*n_channel, 8*n_channel, kernel_size=3, padding=1),
-            nn.ReLU(),
-            nn.Conv1d(8*n_channel, 8*n_channel, kernel_size=3, padding=1),
-            nn.ReLU(),
-            nn.Conv1d(8*n_channel, 8*n_channel, kernel_size=3, padding=1),
-            nn.ReLU(),
-            nn.MaxPool1d(4, return_indices=True),
-
-            # conv4
-            nn.Conv1d(8*n_channel, 8*n_channel, kernel_size=3, padding=1),
-            nn.ReLU(),
-            nn.Conv1d(8*n_channel, 8*n_channel, kernel_size=3, padding=1),
-            nn.ReLU(),
-            nn.Conv1d(8*n_channel, 8*n_channel, kernel_size=3, padding=1),
-            nn.ReLU(),
-            nn.MaxPool1d(4, return_indices=True)
-        )
-
-        self.classifier = nn.Sequential(
-            # *7? TODO check this works for other channel sizes
-            nn.Linear(8*n_channel*7, 32*n_channel),
-            nn.ReLU(),
-            nn.Dropout(),
-            nn.Linear(32*n_channel, 32*n_channel),
-            nn.ReLU(),
-            nn.Dropout(),
-            nn.Linear(32*n_channel, n_output)
-        )
-
-        self.conv_layer_indices = [0, 2, 5, 7, 10, 12, 14, 17, 19, 21, 24, 26, 28]
-        self.feature_maps = OrderedDict()
-        self.pool_locs = OrderedDict()
+        # Final layer
+        self.layer8 = nn.Linear(64*n_channel, n_output)
+      
 
     def forward(self, x):
-        for layer in self.features:
-            if isinstance(layer, nn.MaxPool1d):
-                x, location = layer(x)
-            else:
-                x = layer(x)
-        
-        print("Shape before view and classifer:", x.shape)
-        x = x.view(x.size()[0], -1)
-        print("Shape after view:", x.shape)
-        x = self.classifier(x)
-        print("Shape after classifier:", x.shape)
-        return x
+        out = self.layer1(x)
+        out = self.layer2(out)
+        out = self.layer3(out)
+        out = self.layer4(out)
+        out = self.layer5(out)
+
+        out = out.view(out.size()[0], -1)
+
+        out = self.layer6(out)
+        out = self.layer7(out)
+        out = self.layer8(out)
+
+        return out
 
 
 model = VGG16(n_input=transformed.shape[0], n_output = len(labels), n_channel=n_channel)
@@ -200,10 +185,15 @@ n = count_params(model)
 print("Number of parameters: {}".format(n))
 
 criterion = nn.CrossEntropyLoss()
-optimizer = torch.optim.SGD(model.parameters(), lr=learning_rate, weight_decay=0.005, momentum=0.9)
+optimizer = torch.optim.SGD(model.parameters(), lr=learning_rate, weight_decay=0.001, momentum=0.9)
+scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer, verbose=True)
 
 def train(model, epoch, log_interval):
     model.train()
+
+    total_loss = 0
+    count = 0
+
     for batch_idx, (data, target) in enumerate(tqdm(train_loader)):
         data = data.to(device)
         target = target.to(device)
@@ -212,7 +202,9 @@ def train(model, epoch, log_interval):
         data = transform(data)
         output = model(data)
 
-        loss = criterion(output, target)
+        loss = criterion(output.squeeze(), target) # is squeeze necessary? might not be if there are no dimensions of size 1
+        total_loss += loss.data
+        count += 1
 
         optimizer.zero_grad()
         loss.backward()
@@ -221,6 +213,8 @@ def train(model, epoch, log_interval):
         # print training stats
         if batch_idx % log_interval == 0:
             print(f"Train Epoch: {epoch} [({100. * batch_idx / len(train_loader):.0f}%)]\tLoss: {loss.item():.6f}")
+
+    scheduler.step(total_loss)
 
 
 def number_of_correct(pred, target):
@@ -236,6 +230,8 @@ def get_likely_index(tensor):
 def test(model, epoch):
     model.eval()
     correct = 0
+    counts = numpy.zeros(35, dtype = int)
+
     for data, target in test_loader:
 
         data = data.to(device)
@@ -247,12 +243,19 @@ def test(model, epoch):
 
         pred = get_likely_index(output)
         correct += number_of_correct(pred, target)
+
+        for p in pred:
+          counts[p] += 1
+
+    print("Predicted label counts:", counts)
+
     # TODO low priority fix this logging so it doesnt show errors.
     # it runs fine, but pyright doesnt like it + messy and confusing
     print(f"\nTest Epoch: {epoch}\tAccuracy: {correct}/{len(test_loader.dataset)} ({100. * correct / len(test_loader.dataset):.0f}%)\n")
 
 # print status every log_interval iterations
-log_interval = 1
+log_interval = 10
+
 
 # The transform needs to live on the same device as the model and the data.
 transform = transform.to(device)
