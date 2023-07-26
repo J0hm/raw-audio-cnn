@@ -27,5 +27,5 @@ optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate, weight_decay=
 scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer, patience=3, verbose=True)
 
 for epoch in range(1, num_epochs+1):
-    train(model, scloader.transform, criterion, optimizer, scheduler, epoch, scloader.train_loader, device, verbose=True)
+    train(model, scloader.transform, criterion, optimizer, scheduler, epoch, scloader.train_loader, device)
     test(model, scloader.transform, epoch, scloader.test_loader, device)
