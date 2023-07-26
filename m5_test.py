@@ -12,7 +12,7 @@ batch_size = 256
 new_sample_rate = 8000 
 n_channel = 32
 num_epochs = 120
-learning_rate = 0.01 # 0.001 in original network
+learning_rate = 0.01 
 # ------------------------------------
 
 scloader = SCLoader(device, batch_size, new_sample_rate)
