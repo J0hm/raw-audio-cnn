@@ -13,10 +13,6 @@ new_sample_rate = 8000
 n_channel = 32
 num_epochs = 120
 learning_rate = 0.01 # 0.001 in original network
-
-# brief testing shows that no class balancing converges faster. why? perhaps a flawed implementation? or n_channel is too low, net is not complex enough to benefit
-# it does, however, prevent classes from having 0 predictions in the first few epochs, so it seems like its doing something right
-use_class_weights = True 
 # ------------------------------------
 
 scloader = SCLoader(device, batch_size, new_sample_rate)
@@ -25,16 +21,11 @@ model.to(device)
 print(model)
 print("Number of parameters:", model.count_params())
 
-criterion = nn.CrossEntropyLoss()
+criterion = nn.NLLLoss()
 
-if(use_class_weights):
-    weights = scloader.get_weights()
-    weights = weights.to(device)
-    criterion = nn.CrossEntropyLoss(weight=weights)
-
-optimizer = torch.optim.SGD(model.parameters(), lr=learning_rate, weight_decay=0.001, momentum=0.9) # TODO test with Adam
+optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate, weight_decay=0.0001) # TODO test with Adam
 scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer, patience=3, verbose=True)
 
 for epoch in range(1, num_epochs+1):
-    train(model, scloader.transform, criterion, optimizer, scheduler, epoch, scloader.train_loader, device)
+    train(model, scloader.transform, criterion, optimizer, scheduler, epoch, scloader.train_loader, device, verbose=True)
     test(model, scloader.transform, epoch, scloader.test_loader, device)
