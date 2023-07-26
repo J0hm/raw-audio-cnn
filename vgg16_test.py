@@ -16,7 +16,7 @@ batch_size = 256
 num_classes = 35
 new_sample_rate = 8000
 n_channel = 1
-num_epochs = 60
+num_epochs = 120
 learning_rate = 0.01 # 0.001 in original network
 
 # brief testing shows that no class balancing converges faster. why? perhaps a flawed implementation? or n_channel is too low, net is not complex enough to benefit
@@ -94,7 +94,7 @@ def get_weights():
 
     weights = torch.max(weights)/weights 
 
-    print("Using wieghts:", weights)
+    print("Using weights:", weights)
     return weights
 
 
@@ -212,11 +212,13 @@ if(use_class_weights):
 optimizer = torch.optim.SGD(model.parameters(), lr=learning_rate, weight_decay=0.001, momentum=0.9) # TODO test with Adam
 scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer, patience=3, verbose=True)
 
-def train(model, epoch, log_interval):
+def train(model, epoch, verbose=False, log_interval=10):
     model.train()
 
     total_loss = 0
     count = 0
+    
+    print("Beginning epoch", epoch, "...")
 
     for batch_idx, (data, target) in enumerate(tqdm(train_loader)):
         data = data.to(device)
@@ -235,9 +237,10 @@ def train(model, epoch, log_interval):
         optimizer.step()
 
         # print training stats
-        if batch_idx % log_interval == 0:
-            print(f"Train Epoch: {epoch} [({100. * batch_idx / len(train_loader):.0f}%)]\tLoss: {loss.item():.6f}\tAvg loss: {total_loss / count:.6f}")
+        if verbose and batch_idx % log_interval == 0:
+            print(f"Train Epoch: {epoch} [({100. * batch_idx / len(train_loader):.1f}%)]\tLoss: {loss.item():.6f}\tAvg loss: {total_loss / count:.6f}")
 
+    print(f"Epoch: {epoch} completed\tAvg loss: {total_loss / count:.6f}")
     scheduler.step(total_loss)
 
 def number_of_correct(pred, target):
@@ -248,16 +251,18 @@ def get_likely_index(tensor):
     # find most likely label index for each element in the batch
     return tensor.argmax(dim=-1)
 
-# TODO print actual label counts alongside predicted for easier debugging
-# perhaps add a verbose or debug mode to train and test?
-def test(model, epoch):
+def test(model, epoch, verbose=False):
     model.eval()
     correct = 0
-    counts = numpy.zeros(35, dtype = int)
+    counts_pred = numpy.zeros(35, dtype = int)
+    counts_actual = numpy.zeros(35, dtype = int)
 
     for data, target in test_loader:
         data = data.to(device)
         target = target.to(device)
+        
+        for l in target:
+            counts_actual[l] += 1
 
         # apply transform and model on whole batch directly on device
         data = transform(data)
@@ -267,17 +272,17 @@ def test(model, epoch):
         correct += number_of_correct(pred, target)
 
         for p in pred:
-          counts[p] += 1
+            counts_pred[p] += 1
 
-    print("Predicted label counts:", counts)
+    if(verbose):
+        print("Predicted label counts:\n", counts_pred)
+        print("Actual label counts:\n", counts_actual)
+        print("Diff:\n", (counts_pred-counts_actual))
 
     print(f"\nTest Epoch: {epoch}\tAccuracy: {correct}/{len(test_loader.dataset)} ({100. * correct / len(test_loader.dataset):.0f}%)\n")
-
-# print status every log_interval iterations
-log_interval = 10
 
 # The transform needs to live on the same device as the model and the data.
 transform = transform.to(device)
 for epoch in range(1, num_epochs + 1):
-    train(model, epoch, log_interval)
-    test(model, epoch)
+    train(model, epoch)
+    test(model, epoch, verbose=True)
