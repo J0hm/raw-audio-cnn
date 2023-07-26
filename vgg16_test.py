@@ -184,7 +184,7 @@ class VGG16(nn.Module):
         out = self.layer5(out)
         
         # we change the view here to have the output be the right shape for linear layers
-        # something like [256, 256, 7] -> [256, 1792]
+        # something like [256, 256, 7] -> [256, 1792] i.e. batch of size 256 with 256 channels of 7 features each to batch of size 256 with 1792 features each
         out = out.view(out.size()[0], -1)
 
         out = self.layer6(out)
