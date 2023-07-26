@@ -1,7 +1,7 @@
 import torch
 import torch.nn as nn
 from data_loader import SCLoader
-from models import VGG16
+from models import M5
 from train import train, test
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -9,9 +9,8 @@ print("Running on {}".format(device))
 
 # ---------- HYPERPARAMETERS ----------
 batch_size = 256
-new_sample_rate = 8000 # BE VERY CAREFUL CHANGING THIS. Input size changes FC_CHANNEL_MUL must be cchanged too
-fc_channel_mul = 7 # SR->MUL: 2000->1, 4000->3, 8000->7, 16000->15. 2*SR->2*MUL(SR)+1
-n_channel = 64
+new_sample_rate = 8000 
+n_channel = 32
 num_epochs = 120
 learning_rate = 0.01 # 0.001 in original network
 
@@ -21,10 +20,7 @@ use_class_weights = True
 # ------------------------------------
 
 scloader = SCLoader(device, batch_size, new_sample_rate)
-model = VGG16(scloader.n_input,
-              n_output=len(scloader.labels),
-              n_channel=n_channel, 
-              fc_channel_mul=fc_channel_mul)
+model = M5(n_input=scloader.n_input, n_output=len(scloader.labels))
 model.to(device)
 print(model)
 print("Number of parameters:", model.count_params())
