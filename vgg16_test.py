@@ -16,12 +16,12 @@ batch_size = 256
 num_classes = 35
 new_sample_rate = 8000
 n_channel = 1
-num_epochs = 5
+num_epochs = 60
 learning_rate = 0.01 # 0.001 in original network
 
 # brief testing shows that no class balancing converges faster. why? perhaps a flawed implementation?
 # it does, however, prevent classes from having 0 predictions in the first few epochs, so it seems like its doing something right
-use_class_weights = False 
+use_class_weights = True 
 # ------------------------------------
 
 
@@ -87,6 +87,7 @@ def collate_fn(batch):
 def get_weights():
     print("Calculating weights...")
     weights = torch.zeros(num_classes, dtype=torch.long)
+    weights.to(device)
     for _, (_, target) in enumerate(tqdm(train_loader)):
         for label in target:
             weights[label] += 1
@@ -205,15 +206,17 @@ criterion = nn.CrossEntropyLoss()
 
 if(use_class_weights):
     weights = get_weights()
+    weights = weights.to(device)
     criterion = nn.CrossEntropyLoss(weight=weights)
 
 optimizer = torch.optim.SGD(model.parameters(), lr=learning_rate, weight_decay=0.001, momentum=0.9) # TODO test with Adam
-scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer, verbose=True)
+scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer, patience=3, verbose=True)
 
 def train(model, epoch, log_interval):
     model.train()
 
     total_loss = 0
+    count = 0
 
     for batch_idx, (data, target) in enumerate(tqdm(train_loader)):
         data = data.to(device)
@@ -224,7 +227,8 @@ def train(model, epoch, log_interval):
         output = model(data)
 
         loss = criterion(output.squeeze(), target) # is squeeze necessary? might not be if there are no dimensions of size 1
-        total_loss += loss.data
+        total_loss += loss.item()
+        count += 1
 
         optimizer.zero_grad()
         loss.backward()
@@ -232,7 +236,7 @@ def train(model, epoch, log_interval):
 
         # print training stats
         if batch_idx % log_interval == 0:
-            print(f"Train Epoch: {epoch} [({100. * batch_idx / len(train_loader):.0f}%)]\tLoss: {loss.item():.6f}")
+            print(f"Train Epoch: {epoch} [({100. * batch_idx / len(train_loader):.0f}%)]\tLoss: {loss.item():.6f}\tAvg loss: {total_loss / count:.6f}")
 
     scheduler.step(total_loss)
 
