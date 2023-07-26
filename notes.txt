@@ -6,7 +6,8 @@ TODO: seperate vgg16_test.py into multiple files (dataloader/preprocess, model, 
 TODO: test with similar kernels/strides/padding as M11/M18
 
 n_channel=64: 36,545,955 params, 77% first epoch accuracy
-n_channel=32: 9,182,947 params, 63: first epoch 
+n_channel=32: 9,182,947 params, 63% first epoch 
+n_channel=16: 2,318,979 params, 54% first epoch accuracy
 n_channel=8: 591,397 params, 61% first epoch accuracy
 n_channel=4: 154,675 params, 45% first epoch accuracy
 n_channel=2: 41,347 params, 32% first epoch accuracy
