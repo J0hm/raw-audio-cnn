@@ -27,7 +27,7 @@ def train(model, transform, criterion, optimizer, scheduler, epoch, loader, devi
 
         # print training stats
         if verbose and batch_idx % log_interval == 0:
-            print(f"Train Epoch: {epoch} [({100. * batch_idx / len(loader):.1f}%)]\tLoss: {loss.item():.6f}\tAvg loss: {total_loss / count:.6f}")
+            print(f"Train Epoch: {epoch} [({100. * batch_idx / len(loader.dataset):.1f}%)]\tLoss: {loss.item():.6f}\tAvg loss: {total_loss / count:.6f}")
 
     print(f"Epoch: {epoch} completed\tAvg loss: {total_loss / count:.6f}")
     scheduler.step(total_loss)
@@ -68,5 +68,5 @@ def test(model, transform, epoch, loader, device, verbose=False):
         print("Actual label counts:\n", counts_actual)
         print("Diff:\n", (counts_pred-counts_actual))
 
-    print(f"\nTest Epoch: {epoch}\tAccuracy: {correct}/{len(test_loader.dataset)} ({100. * correct / len(test_loader.dataset):.0f}%)\n")
+    print(f"\nTest Epoch: {epoch}\tAccuracy: {correct}/{len(loader.dataset)} ({100. * correct / len(loader.dataset):.0f}%)\n")
 
