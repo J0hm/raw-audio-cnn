@@ -14,8 +14,9 @@ import os
 # ---------- HYPERPARAMETERS ----------
 batch_size = 256
 num_classes = 35
-new_sample_rate = 8000
-n_channel = 1
+new_sample_rate = 8000 # BE VERY CAREFUL CHANGING THIS. Input size changes FC_CHANNEL_MUL must be cchanged too
+FC_CHANNEL_MUL = 7 # 3 for SR=4000, 7 for SR = 8000
+n_channel = 64
 num_epochs = 120
 learning_rate = 0.01 # 0.001 in original network
 
@@ -150,7 +151,7 @@ def vgg_fc_layer(size_in, size_out):
         nn.Linear(size_in, size_out),
         nn.BatchNorm1d(size_out),
         nn.ReLU(),
-        #nn.Dropout() # TODO dropout testing
+        nn.Dropout() # TODO dropout testing
     )
 
     return layer
@@ -170,7 +171,7 @@ class VGG16(nn.Module):
         self.layer5 = vgg_conv_block([8*n_channel,8*n_channel,8*n_channel], [8*n_channel,8*n_channel,8*n_channel], [3,3,3], [1,1,1], 4, 4)
 
         # FC layers
-        self.layer6 = vgg_fc_layer(8*n_channel*7, 64*n_channel)
+        self.layer6 = vgg_fc_layer(8*n_channel*FC_CHANNEL_MUL, 64*n_channel)
         self.layer7 = vgg_fc_layer(64*n_channel, 64*n_channel)
 
         # Final layer
@@ -285,4 +286,5 @@ def test(model, epoch, verbose=False):
 transform = transform.to(device)
 for epoch in range(1, num_epochs + 1):
     train(model, epoch)
-    test(model, epoch, verbose=True)
+    test(model, epoch)
+    
