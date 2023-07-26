@@ -19,7 +19,7 @@ n_channel = 1
 num_epochs = 60
 learning_rate = 0.01 # 0.001 in original network
 
-# brief testing shows that no class balancing converges faster. why? perhaps a flawed implementation?
+# brief testing shows that no class balancing converges faster. why? perhaps a flawed implementation? or n_channel is too low, net is not complex enough to benefit
 # it does, however, prevent classes from having 0 predictions in the first few epochs, so it seems like its doing something right
 use_class_weights = True 
 # ------------------------------------
@@ -248,6 +248,8 @@ def get_likely_index(tensor):
     # find most likely label index for each element in the batch
     return tensor.argmax(dim=-1)
 
+# TODO print actual label counts alongside predicted for easier debugging
+# perhaps add a verbose or debug mode to train and test?
 def test(model, epoch):
     model.eval()
     correct = 0
