@@ -1,3 +1,5 @@
+from abc import ABC
+import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
@@ -26,7 +28,25 @@ def vgg_fc_layer(size_in, size_out, dropout=True):
 
     return layer
 
-class VGG16(nn.Module):
+
+
+class AbstractModel(ABC, nn.Module):
+    def save_model(self, path):
+        torch.save(self.state_dict(), path)
+
+    def save_checkpoint(self, optimizer, epoch, loss, path):
+        torch.save({
+            'epoch': epoch,
+            'model_state_dict': self.state_dict(),
+            'optimizer_state_dict': optimizer.state_dict(),
+            'loss': loss,
+            }, path)
+
+    def count_params(self):
+        return sum(p.numel() for p in self.parameters() if p.requires_grad)
+
+
+class VGG16(AbstractModel):
     def __init__(self, n_input=1, n_output=35, n_channel=32, fc_channel_mul=7):
         super().__init__()
 
@@ -52,21 +72,20 @@ class VGG16(nn.Module):
 
         return out
 
-    def count_params(self):
-        return sum(p.numel() for p in self.parameters() if p.requires_grad)
 
 # NOTE: this is not the same network as in the paper: should be 128, 128, 256, 512
-class M5(nn.Module):
-    def __init__(self, n_input=1, n_output=35, stride=16, n_channel=32):
+class M5(AbstractModel):
+    def __init__(self, n_input=1, n_output=35, stride=4, n_channel=128):
         super().__init__()
         self.features = nn.Sequential(
-            vgg_conv_block([n_input], [n_channel], [80], [0], [stride], 4, 4),
-            vgg_conv_block([n_channel], [n_channel], [3], [0], [1], 4, 4),
-            vgg_conv_block([n_channel], [2*n_channel], [3], [0], [1], 4, 4),
-            vgg_conv_block([2*n_channel], [2*n_channel], [3], [0], [1], 4, 4)
+            vgg_conv_block([n_input], [n_channel], [80], [38], [stride], 4, 4),
+            vgg_conv_block([n_channel], [n_channel], [3], [1], [1], 4, 4),
+            vgg_conv_block([n_channel], [2*n_channel], [3], [1], [1], 4, 4),
+            vgg_conv_block([2*n_channel], [4*n_channel], [3], [1], [1], 4, 4)
+            # NOTE: output here should be 4*n_channel and n_channel should be 128
         )
         
-        self.fc1 = nn.Linear(2 * n_channel, n_output)
+        self.fc1 = nn.Linear(4 * n_channel, n_output)
 
     def forward(self, x):
         x = self.features(x)
@@ -74,9 +93,6 @@ class M5(nn.Module):
         x = x.permute(0, 2, 1)
         x = self.fc1(x)
         return F.log_softmax(x, dim=2)
- 
-    def count_params(self):
-        return sum(p.numel() for p in self.parameters() if p.requires_grad)
 
 
 class M11(nn.Module):

@@ -12,14 +12,14 @@ torch.set_flush_denormal(True)
 # ---------- HYPERPARAMETERS ----------
 batch_size = 256
 new_sample_rate = 8000 
-n_channel = 32
-num_epochs = 120
+n_channel = 32 # 128 for full model
+num_epochs = 60
 learning_rate = 0.01 
 # ------------------------------------
 
 scloader = SCLoader(device, batch_size, new_sample_rate)
 n_output = len(scloader.labels)
-model = M5(n_input=scloader.n_input, n_output=n_output)
+model = M5(n_input=scloader.n_input, n_output=n_output, n_channel=n_channel)
 model.to(device)
 print(model)
 print("Number of parameters:", model.count_params())
@@ -29,8 +29,12 @@ criterion = nn.NLLLoss()
 optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate, weight_decay=0.0001) # TODO test with Adam
 scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer, patience=3, verbose=True)
 visualizer = LossVisualizer("M5 Training Loss")
+epoch_loss = 0
 
 for epoch in range(0, num_epochs):
     epoch_loss = train(model, scloader.transform, criterion, optimizer, scheduler, epoch, scloader.train_loader, device)
     visualizer.append_loss(epoch, epoch_loss)
     test(model, scloader.transform, epoch, scloader.test_loader, device)
+
+model.save_model("saved/m5_{}_{}.pt".format(n_channel, num_epochs))
+model.save_checkpoint(optimizer, num_epochs, epoch_loss, "saved/m5_{}_{}_checkpoint.pt".format(n_channel, num_epochs)) 

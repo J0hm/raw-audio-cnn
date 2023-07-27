@@ -42,7 +42,12 @@ optimizer = torch.optim.SGD(model.parameters(), lr=learning_rate, weight_decay=0
 scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer, patience=3, verbose=True)
 visualizer = LossVisualizer("VGG16 Training Loss")
 
+epoch_loss = 0
+
 for epoch in range(0, num_epochs):
     epoch_loss = train(model, scloader.transform, criterion, optimizer, scheduler, epoch, scloader.train_loader, device)
     visualizer.append_loss(epoch, epoch_loss)
     test(model, scloader.transform, epoch, scloader.test_loader, device)
+
+model.save_model("saved/vgg16_{}_{}.pt".format(n_channel, num_epochs))
+model.save_checkpoint(optimizer, num_epochs, epoch_loss, "saved/vgg16_{}_{}_checkpoint.pt".format(n_channel, num_epochs)) 
