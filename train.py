@@ -31,6 +31,7 @@ def train(model, transform, criterion, optimizer, scheduler, epoch, loader, devi
 
     print(f"Epoch: {epoch} completed\tAvg loss: {total_loss / count:.6f}")
     scheduler.step(total_loss)
+    return total_loss / count
 
 def number_of_correct(pred, target):
     # count number of correct predictions

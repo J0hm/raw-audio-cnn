@@ -1,6 +1,7 @@
 import torch
 import torch.nn as nn
 from data_loader import SCLoader
+from visualizer import LossVisualizer
 from models import VGG16
 from train import train, test
 
@@ -38,7 +39,9 @@ if(use_class_weights):
 
 optimizer = torch.optim.SGD(model.parameters(), lr=learning_rate, weight_decay=0.001, momentum=0.9) # TODO test with Adam
 scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer, patience=3, verbose=True)
+visualizer = LossVisualizer("VGG16 Training Loss")
 
-for epoch in range(1, num_epochs+1):
-    train(model, scloader.transform, criterion, optimizer, scheduler, epoch, scloader.train_loader, device)
+for epoch in range(0, num_epochs):
+    epoch_loss = train(model, scloader.transform, criterion, optimizer, scheduler, epoch, scloader.train_loader, device)
+    visualizer.append_loss(epoch, epoch_loss)
     test(model, scloader.transform, epoch, scloader.test_loader, device)
