@@ -55,7 +55,7 @@ class VGG16(nn.Module):
     def count_params(self):
         return sum(p.numel() for p in self.parameters() if p.requires_grad)
 
-
+# NOTE: this is not the same network as in the paper: should be 128, 128, 256, 512
 class M5(nn.Module):
     def __init__(self, n_input=1, n_output=35, stride=16, n_channel=32):
         super().__init__()
@@ -67,6 +67,30 @@ class M5(nn.Module):
         )
         
         self.fc1 = nn.Linear(2 * n_channel, n_output)
+
+    def forward(self, x):
+        x = self.features(x)
+        x = F.avg_pool1d(x, x.shape[-1])
+        x = x.permute(0, 2, 1)
+        x = self.fc1(x)
+        return F.log_softmax(x, dim=2)
+ 
+    def count_params(self):
+        return sum(p.numel() for p in self.parameters() if p.requires_grad)
+
+
+class M11(nn.Module):
+    def __init__(self, n_input=1, n_output=35, stride=4, n_channel=64):
+        super().__init__()
+        self.features = nn.Sequential(
+            vgg_conv_block([n_input], [n_channel], [80], [38], [stride], 4, 4),
+            vgg_conv_block([n_channel, n_channel], [n_channel, n_channel], [3, 3], [1, 1], [1, 1], 4, 4),
+            vgg_conv_block([n_channel, 2*n_channel], [2*n_channel, 2*n_channel], [3, 3], [1, 1], [1, 1], 4, 4),
+            vgg_conv_block([2*n_channel, 4*n_channel, 4*n_channel], [4*n_channel, 4*n_channel, 4*n_channel], [3, 3, 3], [1, 1, 1], [1, 1, 1], 4, 4),
+            vgg_conv_block([4*n_channel, 8*n_channel], [8*n_channel, 8*n_channel], [3, 3], [1, 1], [1, 1], 4, 4)
+        )
+        
+        self.fc1 = nn.Linear(8*n_channel, n_output)
 
     def forward(self, x):
         x = self.features(x)
