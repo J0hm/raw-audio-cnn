@@ -7,6 +7,7 @@ from train import train, test
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 print("Running on {}".format(device))
+torch.set_flush_denormal(True)
 
 # ---------- HYPERPARAMETERS ----------
 batch_size = 256
