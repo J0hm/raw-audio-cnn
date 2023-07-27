@@ -3,6 +3,6 @@ torchaudio
 torchvision
 librosa
 numpy
-matplotlib
 tqdm
 pandas
+visdom
