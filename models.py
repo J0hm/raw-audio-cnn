@@ -29,31 +29,26 @@ def vgg_fc_layer(size_in, size_out, dropout=True):
 class VGG16(nn.Module):
     def __init__(self, n_input=1, n_output=35, n_channel=32, fc_channel_mul=7):
         super().__init__()
-        # Conv blocks (BatchNorm + ReLU activation added in each block)
-        self.layer1 = vgg_conv_block([n_input,n_channel], [n_channel,n_channel], [80,3], [1,1], [1,1], 4, 4)
-        self.layer2 = vgg_conv_block([n_channel,2*n_channel], [2*n_channel,2*n_channel], [3,3], [1,1], [1,1], 4, 4)
-        self.layer3 = vgg_conv_block([2*n_channel,4*n_channel,4*n_channel], [4*n_channel,4*n_channel,4*n_channel], [3,3,3], [1,1,1], [1,1,1], 4, 4)
-        self.layer4 = vgg_conv_block([4*n_channel,8*n_channel,8*n_channel], [8*n_channel,8*n_channel,8*n_channel], [3,3,3], [1,1,1], [1,1,1], 4, 4)
-        self.layer5 = vgg_conv_block([8*n_channel,8*n_channel,8*n_channel], [8*n_channel,8*n_channel,8*n_channel], [3,3,3], [1,1,1], [1,1,1], 4, 4)
 
-        # FC layers
-        self.layer6 = vgg_fc_layer(8*n_channel*fc_channel_mul, 64*n_channel)
-        self.layer7 = vgg_fc_layer(64*n_channel, 64*n_channel)
+        self.features = nn.Sequential(
+            vgg_conv_block([n_input,n_channel], [n_channel,n_channel], [80,3], [1,1], [1,1], 4, 4),
+            vgg_conv_block([n_channel,2*n_channel], [2*n_channel,2*n_channel], [3,3], [1,1], [1,1], 4, 4),
+            vgg_conv_block([2*n_channel,4*n_channel,4*n_channel], [4*n_channel,4*n_channel,4*n_channel], [3,3,3], [1,1,1], [1,1,1], 4, 4),
+            vgg_conv_block([4*n_channel,8*n_channel,8*n_channel], [8*n_channel,8*n_channel,8*n_channel], [3,3,3], [1,1,1], [1,1,1], 4, 4),
+            vgg_conv_block([8*n_channel,8*n_channel,8*n_channel], [8*n_channel,8*n_channel,8*n_channel], [3,3,3], [1,1,1], [1,1,1], 4, 4)
+        )
 
-        # Final layer
-        self.layer8 = nn.Linear(64*n_channel, n_output)
+        self.classifier = nn.Sequential(
+            vgg_fc_layer(8*n_channel*fc_channel_mul, 64*n_channel),
+            vgg_fc_layer(64*n_channel, 64*n_channel),
+            nn.Linear(64*n_channel, n_output),
+        )
       
 
     def forward(self, x):
-        out = self.layer1(x)
-        out = self.layer2(out)
-        out = self.layer3(out)
-        out = self.layer4(out)
-        out = self.layer5(out)
+        out = self.features(x)
         out = out.view(out.size()[0], -1)
-        out = self.layer6(out)
-        out = self.layer7(out)
-        out = self.layer8(out)
+        out = self.classifier(out)
 
         return out
 

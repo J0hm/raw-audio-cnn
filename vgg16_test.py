@@ -7,12 +7,13 @@ from train import train, test
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 print("Running on {}".format(device))
+torch.set_flush_denormal(True)
 
 # ---------- HYPERPARAMETERS ----------
 batch_size = 256
 new_sample_rate = 8000 # BE VERY CAREFUL CHANGING THIS. Input size changes FC_CHANNEL_MUL must be cchanged too
 fc_channel_mul = 7 # SR->MUL: 2000->1, 4000->3, 8000->7, 16000->15. 2*SR->2*MUL(SR)+1
-n_channel = 64
+n_channel = 1
 num_epochs = 120
 learning_rate = 0.01 # 0.001 in original network
 
