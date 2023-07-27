@@ -29,6 +29,7 @@ class SCLoader():
         self.__new_SR = new_SR
         self.__train_set = SubsetSC("training")
         self.__test_set = SubsetSC("testing")
+        self.__validate_set = SubsetSC("validation")
 
         waveform, sample_rate, _, _, _ = self.__train_set[0]
 
@@ -88,6 +89,16 @@ class SCLoader():
             num_workers=num_workers,
             pin_memory=pin_memory
         )
+        self.validate_loader = torch.utils.data.DataLoader(
+            self.__validate_set,
+            batch_size=self.__batch_size,
+            shuffle=True,
+            drop_last=False,
+            collate_fn=collate_fn,
+            num_workers=num_workers,
+            pin_memory=pin_memory
+        )
+
 
     def label_to_index(self, word):
         return torch.tensor(self.labels.index(word))
