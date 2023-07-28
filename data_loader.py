@@ -150,7 +150,7 @@ class MarineMammalDataset(Dataset):
         if self.transform:
             waveform = self.transform(waveform)
 
-        return waveform, label
+        return (waveform, label)
 
 class MammalLoader():
     def __init__(self, device, batch_size, new_SR, pad_to=2, data_path="marineaudio/datasets/len2/"):
@@ -183,13 +183,17 @@ class MammalLoader():
         else:
             num_workers = 0
             pin_memory= False
-    
+        def pad_sequence(batch):
+            batch = [item.t() for item in batch]
+            batch = torch.nn.utils.rnn.pad_sequence(batch, batch_first=True, padding_value=0.)
+            return batch.permute(0, 2, 1)
+
         def collate_fn(batch):
             tensors, targets = [], []
             for (waveform, label) in batch:
                 tensors += [waveform]
                 targets += [torch.tensor(label)] 
-            # IF PADDING IS WRONG: implement pad_sequence HERE instead of in the dataset generator
+            tensors = pad_sequence(tensors)
             targets = torch.stack(targets)
             return tensors, targets
     
