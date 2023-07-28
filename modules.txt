@@ -1,0 +1,20 @@
+models.py: All models have configurable input, output, and channel sizes.
+    VGG16: 36.5M params for full 64 channels
+    M5: 0.6M params for full 128 channels
+    M11: ~2M params?
+
+data_loader.py:
+    SCLoader: Loads the speechcommmands dataset and holds the loaders for each subset as well as a few other pieces of information (notably the trandform function for resampling and the labels).
+
+train.py:
+    train(...): Performs one epoch of training on the given model with the given data transform, loss criterion, and scheduler. Optionally prints extra training information.
+    test(...): Tests the given model against the test set. Optionally prints extra training information
+
+visualizer.py:
+    LossVisualizer: A class which pushes loss information to a Visdom server, which can be viewed as a graph in the browser.
+
+*_test.py:
+    Test scripts to train each model implemented. Currently, hyperparameters can be adjusted in the top of the file.
+
+validate.py:
+    Basic script to load and run a model against the validation set.
