@@ -1,7 +1,11 @@
 import os
 import torch
+import torchaudio.transforms
 import torchaudio
 import torch.utils.data.dataloader
+import torch.nn.functional as F
+import pandas as pd
+from torch.utils.data import Dataset
 from torchaudio.datasets import SPEECHCOMMANDS
 from tqdm import tqdm
 
@@ -118,3 +122,122 @@ class SCLoader():
 
         print("Using weights:", weights)
         return weights
+
+class MarineMammalDataset(Dataset):
+    def __init__(self, csv_file, root_dir, pad_to=2, transform=None):
+        self.annotations = pd.read_csv(csv_file)
+        self.root_dir = root_dir
+        self.transform = transform
+        self.pad_to = pad_to
+
+    def __len__(self):
+        return len(self.annotations)
+
+    def __getitem__(self, idx):
+        if torch.is_tensor(idx):
+            idx = idx.tolist()
+        wav_name = os.path.join(self.root_dir,
+                                self.annotations.iloc[idx, 0])
+        label = self.annotations.iloc[idx, 1]
+
+
+        waveform, sample_rate = torchaudio.load(wav_name)
+        num_frames = torchaudio.info(wav_name).num_frames
+        req_frames = self.pad_to*sample_rate
+        if(req_frames - num_frames > 0):
+            waveform = F.pad(input=waveform, pad=(0, req_frames-num_frames), mode='constant', value=0)
+
+        if self.transform:
+            waveform = self.transform(waveform)
+
+        return waveform, label
+
+class MammalLoader():
+    def __init__(self, device, batch_size, new_SR, pad_to=2, data_path="marineaudio/datasets/len2/"):
+        self.transform = torchaudio.transforms.Resample(orig_freq=22050, new_freq=new_SR)
+        self.transform.to(device)
+        self.labels = ['Balaena_mysticetus', 'Balaenoptera_acutorostrata', 'Balaenoptera_physalus', 'Delphinapterus_leucas', 'Delphinus_delphis', 'Erignathus_barbatus', 'Eubalaena_australis', 'Eubalaena_glacialis', 'Globicephala_macrorhynchus', 'Globicephala_melas', 'Grampus_griseus', 'Hydrurga_leptonyx', 'Lagenodelphis_hosei', 'Lagenorhynchus_acutus', 'Lagenorhynchus_albirostris', 'Megaptera_novaeangliae', 'Monodon_monoceros', 'Odobenus_rosmarus', 'Ommatophoca_rossi', 'Orcinus_orca', 'Pagophilus_groenlandicus', 'Peponocephala_electra', 'Physeter_macrocephalus', 'Pseudorca_crassidens', 'Stenella_attenuata', 'Stenella_clymene', 'Stenella_coeruleoalba', 'Stenella_frontalis', 'Stenella_longirostris', 'Steno_bredanensis', 'Tursiops_truncatus']
+        self.__device = device
+        self.__batch_size = batch_size
+        self.__train_set = MarineMammalDataset(os.path.join(data_path, "train.csv"), 
+                                               os.path.join(data_path, "audio"), 
+                                               transform=self.transform, pad_to=pad_to)
+        self.__test_set = MarineMammalDataset(os.path.join(data_path, "test.csv"), 
+                                               os.path.join(data_path, "audio"), 
+                                               transform=self.transform, pad_to=pad_to)
+        self.__validate_set = MarineMammalDataset(os.path.join(data_path, "validate.csv"), 
+                                               os.path.join(data_path, "audio"), 
+                                               transform=self.transform, pad_to=pad_to)
+
+        print("Success: grabbed dataset.")
+        print("Labels: {}".format(self.labels))
+        s_input = self.__train_set.__getitem__(0)[0].shape
+        print("Input shape:", s_input)
+            
+        self.n_input = s_input[0]
+        print("n_input:", self.n_input)
+
+        if device == "cuda":
+            num_workers = 1
+            pin_memory = True
+        else:
+            num_workers = 0
+            pin_memory= False
+    
+        def collate_fn(batch):
+            tensors, targets = [], []
+            for (waveform, label) in batch:
+                tensors += [waveform]
+                targets += [torch.tensor(label)] 
+            # IF PADDING IS WRONG: implement pad_sequence HERE instead of in the dataset generator
+            targets = torch.stack(targets)
+            return tensors, targets
+    
+        self.train_loader = torch.utils.data.DataLoader(
+            self.__train_set,
+            batch_size=self.__batch_size,
+            shuffle=True,
+            collate_fn=collate_fn,
+            num_workers=num_workers,
+            pin_memory=pin_memory
+        )
+        self.test_loader = torch.utils.data.DataLoader(
+            self.__test_set,
+            batch_size=self.__batch_size,
+            shuffle=True,
+            drop_last=False,
+            collate_fn=collate_fn,
+            num_workers=num_workers,
+            pin_memory=pin_memory
+        )
+        self.validate_loader = torch.utils.data.DataLoader(
+            self.__validate_set,
+            batch_size=self.__batch_size,
+            shuffle=True,
+            drop_last=False,
+            collate_fn=collate_fn,
+            num_workers=num_workers,
+            pin_memory=pin_memory
+        )
+
+    def label_to_index(self, word):
+        return torch.tensor(self.labels.index(word))
+
+    def index_to_label(self, index):
+        return self.labels[index]
+
+    def get_weights(self):
+        print("Calculating weights...")
+        weights = torch.zeros(len(self.labels), dtype=torch.long)
+        weights.to(self.__device)
+        for _, (_, target) in enumerate(tqdm(self.train_loader)):
+            for label in target:
+                weights[label] += 1
+        
+        print(weights, torch.sum(weights))
+        weights = torch.max(weights)/weights 
+
+        print("Using weights:", weights)
+        return weights
+
+
