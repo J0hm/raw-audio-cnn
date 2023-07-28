@@ -9,6 +9,8 @@ from torch.utils.data import Dataset
 from torchaudio.datasets import SPEECHCOMMANDS
 from tqdm import tqdm
 
+# TODO: abstract class for dataloaders
+
 class SubsetSC(SPEECHCOMMANDS):
     def __init__(self, subset):
         super().__init__("./", download=True)
