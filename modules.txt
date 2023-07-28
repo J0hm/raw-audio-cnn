@@ -1,7 +1,7 @@
-models.py: All models have configurable input, output, and channel sizes.
+models.py: All models have configurable input, output, and channel sizes. Param counts are with sr=8000
     VGG16: 36.5M params for full 64 channels
     M5: 0.6M params for full 128 channels
-    M11: ~2M params?
+    M11: 1.8M params for full 64 channels
 
 data_loader.py:
     SCLoader: Loads the speechcommmands dataset and holds the loaders for each subset as well as a few other pieces of information (notably the trandform function for resampling and the labels).
