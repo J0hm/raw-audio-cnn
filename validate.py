@@ -3,7 +3,7 @@ from models import M5
 from data_loader import SCLoader
 from train import test
 
-path = "saved/m5_32_1.pt"
+path = "saved/m5_32_60.pt"
 batch_size = 256
 new_sample_rate = 8000 
 n_channel = 32

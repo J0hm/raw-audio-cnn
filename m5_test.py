@@ -12,8 +12,8 @@ torch.set_flush_denormal(True)
 # ---------- HYPERPARAMETERS ----------
 batch_size = 256
 new_sample_rate = 8000 
-n_channel = 32 # 128 for full model
-num_epochs = 60
+n_channel = 128 # 128 for full model
+num_epochs = 30
 learning_rate = 0.01 
 # ------------------------------------
 

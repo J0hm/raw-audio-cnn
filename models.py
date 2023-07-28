@@ -46,8 +46,9 @@ class AbstractModel(ABC, nn.Module):
         return sum(p.numel() for p in self.parameters() if p.requires_grad)
 
 
+
 class VGG16(AbstractModel):
-    def __init__(self, n_input=1, n_output=35, n_channel=32, fc_channel_mul=7):
+    def __init__(self, n_input=1, n_output=35, n_channel=64, fc_channel_mul=7):
         super().__init__()
 
         self.features = nn.Sequential(
@@ -73,7 +74,6 @@ class VGG16(AbstractModel):
         return out
 
 
-# NOTE: this is not the same network as in the paper: should be 128, 128, 256, 512
 class M5(AbstractModel):
     def __init__(self, n_input=1, n_output=35, stride=4, n_channel=128):
         super().__init__()
@@ -82,7 +82,6 @@ class M5(AbstractModel):
             vgg_conv_block([n_channel], [n_channel], [3], [1], [1], 4, 4),
             vgg_conv_block([n_channel], [2*n_channel], [3], [1], [1], 4, 4),
             vgg_conv_block([2*n_channel], [4*n_channel], [3], [1], [1], 4, 4)
-            # NOTE: output here should be 4*n_channel and n_channel should be 128
         )
         
         self.fc1 = nn.Linear(4 * n_channel, n_output)
