@@ -49,7 +49,7 @@ class SCLoader():
         self.input_shape = transformed.shape
         self.transform.to(device)
 
-        print("Input shape: {}, resampled to {}".format(self.input_shape, new_SR))
+        print("Input shape: {}, {} sps".format(self.input_shape, new_SR))
 
 
         if device == "cuda":
@@ -174,7 +174,7 @@ class MammalLoader():
         self.transform = torchaudio.transforms.Resample(orig_freq=22050, new_freq=new_SR)
         transformed = self.transform(waveform)
         self.input_shape = transformed.shape
-        print("Input shape: {}, resampled to {}".format(self.input_shape, new_SR))
+        print("Input shape: {}, {} sps".format(self.input_shape, new_SR))
 
         if device == "cuda":
             num_workers = 1
