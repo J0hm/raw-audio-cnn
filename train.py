@@ -4,7 +4,7 @@ import torch.nn as nn
 import torch.optim as optim
 from modules import visualizer
 from modules.visualizer import LossVisualizer
-from modules.models import VGG16, M5, M11
+from modules.models import VGG16, M5, M11, M18
 from modules.train import train, test
 import modules.datasets as datasets
 
@@ -13,7 +13,7 @@ default_settings = {
         "vgg16": [VGG16, nn.CrossEntropyLoss, "SGD", 64, 0.01],
         "m5": [M5, nn.NLLLoss, "Adam", 128, 0.01],
         "m11": [M11, nn.NLLLoss, "Adam", 64, 0.01], 
-        #"m18": [M18, nn.NLLLoss, "Adam", 64, 0.01], 
+        "m18": [M18, nn.NLLLoss, "Adam", 64, 0.01], 
     }
 
 parser = argparse.ArgumentParser()

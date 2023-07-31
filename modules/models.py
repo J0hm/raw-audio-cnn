@@ -131,10 +131,10 @@ class M11(AbstractModel):
 
 
 class M18(AbstractModel):
-    def __init__(self, n_input=1, n_output=35, stride=4, n_channel=64):
-        super().__init__()
+    def __init__(self, identifier, input_shape, n_output=35, stride=4, n_channel=64):
+        super().__init__("m18", identifier, n_channel)
         self.features = nn.Sequential(
-            vgg_conv_block([n_input], [n_channel], [80], [38], [stride], 4, 4),
+            vgg_conv_block([input_shape[0]], [n_channel], [80], [38], [stride], 4, 4),
             vgg_conv_block([n_channel]*4, [n_channel]*4, [3]*4, [1]*4, [1]*4, 4, 4),
             vgg_conv_block([n_channel, 2*n_channel, 2*n_channel, 2*n_channel], [2*n_channel]*4, [3]*4, [1]*4, [1]*4, 4, 4),
             vgg_conv_block([2*n_channel, 4*n_channel, 4*n_channel, 4*n_channel], [4*n_channel]*4, [3]*4, [1]*4, [1]*4, 4, 4),
@@ -155,6 +155,7 @@ class M18(AbstractModel):
 models = {
         "m5": M5,
         "m11": M11,
+        "m18": M18,
         "vgg16": VGG16
     }
 
