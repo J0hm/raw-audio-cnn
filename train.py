@@ -1,73 +1,88 @@
-from tqdm import tqdm
-import numpy
+import argparse
+import torch
+import torch.nn as nn
+import torch.optim as optim
+from modules import visualizer
+from modules.visualizer import LossVisualizer
+from modules.models import VGG16, M5, M11
+from modules.train import train, test
+import modules.datasets as datasets
 
-def train(model, transform, criterion, optimizer, scheduler, epoch, loader, device, verbose=False, log_interval=10):
-    model.train()
+default_settings = {
+        # [model, criterion, optimizer, n_channel, learning_rate]
+        "vgg16": [VGG16, nn.CrossEntropyLoss, "SGD", 64, 0.01],
+        "m5": [M5, nn.NLLLoss, "Adam", 128, 0.01],
+        "m11": [M11, nn.NLLLoss, "Adam", 64, 0.01], 
+        #"m18": [M18, nn.NLLLoss, "Adam", 64, 0.01], 
+    }
 
-    total_loss = 0
-    count = 0
-    
-    print("Beginning epoch", epoch, "...")
+parser = argparse.ArgumentParser()
+parser.add_argument("model", choices=["vgg16", "m5", "m11", "m18"], help="Model type to train.")
+parser.add_argument("dataset", choices=["sc", "marine"], help="Which dataset to train against")
+parser.add_argument("epochs", help="Number of epochs to tran the model for.", type=int)
+parser.add_argument("-i", "--identifier", help="Identifier when saving the model. Defaults to 'dataset'")
+parser.add_argument("-l", "--learningRate", help="Starting learning rate.", type=float)
+parser.add_argument("-b", "--batchSize", help="Size of each batch", type=int, default=256)
+parser.add_argument("-r", "--sampleRate", help="Sample rate to resample to.", type=int, default=8000)
+parser.add_argument("-c", "--channels", help="Number of channels to use.", type=int)
+parser.add_argument("-p", "--patience", help="Number of epochs to wait before reducing LR on plateau", type=int, default=5)
+parser.add_argument("-v", "--verbose", help="Currently unsupported.", action="store_true")
 
-    for batch_idx, (data, target) in enumerate(tqdm(loader)):
-        data = data.to(device)
-        target = target.to(device)
+def buildOptimizer(optim_type, params, lr):
+    if optim_type == "SGD":
+        return optim.SGD(params, lr=lr, weight_decay=0.001, momentum=0.9)
+    elif optim_type == "Adam":
+        return optim.Adam(params, lr=lr, weight_decay=0.0001)
+    else:
+        raise Exception("Error: invalid or unsupported optimizer type")
 
-        # apply transform and model on whole batch directly on device
-        data = transform(data)
-        output = model(data)
+if __name__ == '__main__':
+    args = parser.parse_args()
+    defaults = default_settings[args.model]
+    model_constructor, criterion, optimizer, channels, lr = defaults
+    identifier = args.dataset
 
-        loss = criterion(output.squeeze(), target) # is squeeze necessary? might not be if there are no dimensions of size 1
-        total_loss += loss.item()
-        count += 1
+    if(args.channels):
+        channels = args.channels
+    if(args.identifier):
+        identifier = args.identifier
+    if(args.learningRate):
+        lr = args.learningRate
 
-        optimizer.zero_grad()
-        loss.backward()
-        optimizer.step()
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    print("Running on {}".format(device))
+    torch.set_flush_denormal(True)
 
-        # print training stats
-        if verbose and batch_idx % log_interval == 0:
-            print(f"Train Epoch: {epoch} [({100. * batch_idx / len(loader.dataset):.1f}%)]\tLoss: {loss.item():.6f}\tAvg loss: {total_loss / count:.6f}")
+    loader = datasets.supported[args.dataset](
+            device=device, 
+            batch_size=args.batchSize, 
+            new_SR=args.sampleRate)
 
-    print(f"Epoch: {epoch} completed\tAvg loss: {total_loss / count:.6f}")
-    scheduler.step(total_loss)
-    return total_loss / count
+    model = model_constructor(
+            identifier, 
+            input_shape=loader.input_shape, 
+            n_output=len(loader.labels),
+            n_channel=channels
+        )
 
-def number_of_correct(pred, target):
-    # count number of correct predictions
-    return pred.squeeze().eq(target).sum().item()
+    model.to(device)
+    print(model)
+    print("Number of parameters:", model.count_params())
 
-def get_likely_index(tensor):
-    # find most likely label index for each element in the batch
-    return tensor.argmax(dim=-1)
+    criterion = criterion()
+    optimizer = buildOptimizer(optimizer, model.parameters(), lr)
+    scheduler = optim.lr_scheduler.ReduceLROnPlateau(optimizer, patience=args.patience, verbose=True)
+    visualizer = LossVisualizer("{}, {}, {} channels, SR={}".format(
+        args.model, 
+        args.dataset,
+        channels,
+        args.sampleRate
+    ))
 
-def test(model, transform, epoch, loader, device, verbose=False):
-    model.eval()
-    correct = 0
-    counts_pred = numpy.zeros(35, dtype = int)
-    counts_actual = numpy.zeros(35, dtype = int)
+    epoch_loss = 0
+    for epoch in range(0, args.epochs):
+        epoch_loss = train(model, loader.transform, criterion, optimizer, scheduler, epoch, loader.train_loader, device)
+        visualizer.append_loss(epoch, epoch_loss)
+        test(model, loader.transform, epoch, loader.test_loader, device)
 
-    for data, target in loader:
-        data = data.to(device)
-        target = target.to(device)
-        
-        for l in target:
-            counts_actual[l] += 1
-
-        # apply transform and model on whole batch directly on device
-        data = transform(data)
-        output = model(data)
-
-        pred = get_likely_index(output)
-        correct += number_of_correct(pred, target)
-
-        for p in pred:
-            counts_pred[p] += 1
-
-    if(verbose):
-        print("Predicted label counts:\n", counts_pred)
-        print("Actual label counts:\n", counts_actual)
-        print("Diff:\n", (counts_pred-counts_actual))
-
-    print(f"\nTest Epoch: {epoch}\tAccuracy: {correct}/{len(loader.dataset)} ({100. * correct / len(loader.dataset):.0f}%)\n")
-
+    model.save_model(args.epochs)

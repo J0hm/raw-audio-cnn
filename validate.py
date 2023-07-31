@@ -1,22 +1,23 @@
 import torch
-from models import M11
-from data_loader import SCLoader
-from train import test
+import argparse
+from modules.models import loadModel
+from modules.train import test
 
-path = "saved/m11_64_60.pt"
-batch_size = 256
-new_sample_rate = 8000 
-n_channel = 64
+#parser = argparse.ArgumentParser()
+#parser.add_argument("model", help="Model to validate")
+#parser.add_argument("-b", "--batchSize", help="Size of each batch", type=int, default=256)
+#parser.add_argument("-r", "--sampleRate", help="Sample rate to resample to.", type=int, default=8000)
 
-device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-print("Running on {}".format(device))
-torch.set_flush_denormal(True)
+if __name__ == '__main__':
+    model_name = "m11_marine_64_120.pt"
+    batch_size = 256
+    new_sample_rate = 8000 
 
-scloader = SCLoader(device, batch_size, new_sample_rate)
-n_output = len(scloader.labels)
-model = M11(n_input=scloader.n_input, n_output=n_output, n_channel=n_channel)
-model.load_state_dict(torch.load(path, map_location=torch.device(device)))
-model.eval()
-print("Model {} loaded.".format(path))
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    print("Running on {}".format(device))
+    torch.set_flush_denormal(True)
 
-test(model, scloader.transform, "VALIDATE", scloader.validate_loader, device, verbose=True)
+    model, loader = loadModel(model_name, batch_size, new_sample_rate, device)
+    print("Model {} loaded.".format(model_name))
+
+    test(model, loader.transform, "VALIDATE", loader.validate_loader, device, verbose=True)

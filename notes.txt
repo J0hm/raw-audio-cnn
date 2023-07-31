@@ -4,6 +4,7 @@ Seems to be plateau around 10-11. Scheduler may fix that, impossible to test wit
 TODO: check if weights increase accuracy. It does solve the problem of some labels never being predicted, but it seems like it converges or plateaus slower. Needs more testing on better hardware
 TODO: seperate vgg16_test.py into multiple files (dataloader/preprocess, model, train/test)
 TODO: test with similar kernels/strides/padding as M11/M18
+TODO: remove very long audio files (hr+ long ones, 100mb+)
 
 n_channel=64: 36,545,955 params, 77% first epoch accuracy
 n_channel=32: 9,182,947 params, 63% first epoch 
