@@ -5,6 +5,9 @@ from tqdm import tqdm
 from math import ceil, floor
 import pandas as pd
 
+# idea for balancing dataset: make all possible segments and store them in their "bucket"
+# then, select randomly from the buckets. remove selected item, continue until a bucket is empty
+
 set_splits = [0.7, 0.15, 0.15] # train test validate
 block_len = 2
 max_samples = 250
@@ -32,11 +35,13 @@ with open(os.path.join(export_path, "annotations.csv"), 'w') as csvfile:
             duration = audio.duration_seconds
             for start in range(0, ceil(duration), block_len):
                 split = audio[start*1000:(start+block_len)*1000]
-                export_name = subdir+filename.split(".")[0]+"_"+str(start)+".wav" 
-                path = os.path.join(export_path, "audio", export_name)
-                split.export(path, format="wav")
-                writer.writerow([export_name, target])
-                samples += 1
+                if(split.duration_seconds >= block_len/2):
+                    #print(split.duration_seconds)
+                    export_name = subdir+filename.split(".")[0]+"_"+str(start)+".wav" 
+                    path = os.path.join(export_path, "audio", export_name)
+                    split.export(path, format="wav")
+                    writer.writerow([export_name, target])
+                    samples += 1
         
 
 annotations = pd.read_csv(os.path.join(export_path, "annotations.csv"), header=None, index_col=0)
