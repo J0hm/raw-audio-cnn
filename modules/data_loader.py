@@ -40,18 +40,17 @@ class SCLoader():
         waveform, sample_rate, _, _, _ = self.__train_set[0]
 
         print("Success: grabbed dataset.")
-        print("Shape of waveform: {}".format(waveform.size()))
-        print("Sample rate of waveform: {}".format(sample_rate))
 
         self.labels = sorted(list(set(datapoint[2] for datapoint in self.__train_set)))
         print("Labels: {}".format(self.labels))
 
         self.transform = torchaudio.transforms.Resample(orig_freq=sample_rate, new_freq=self.__new_SR)
         transformed = self.transform(waveform)
-        self.n_input = transformed.shape[0]
+        self.input_shape = transformed.shape
         self.transform.to(device)
 
-        print("n_input:", self.n_input)
+        print("Input shape: {}, resampled to {}".format(self.input_shape, new_SR))
+
 
         if device == "cuda":
             num_workers = 1
@@ -148,7 +147,7 @@ class MarineMammalDataset(Dataset):
         req_frames = self.pad_to*sample_rate
         if(req_frames - num_frames > 0):
             waveform = F.pad(input=waveform, pad=(0, req_frames-num_frames), mode='constant', value=0)
-
+        
         if self.transform:
             waveform = self.transform(waveform)
 
@@ -156,28 +155,26 @@ class MarineMammalDataset(Dataset):
 
 class MammalLoader():
     def __init__(self, device, batch_size, new_SR, pad_to=2, data_path="marineaudio/datasets/len2/"):
-        self.transform = torchaudio.transforms.Resample(orig_freq=22050, new_freq=new_SR)
-        self.transform.to(device)
         self.labels = ['Balaena_mysticetus', 'Balaenoptera_acutorostrata', 'Balaenoptera_physalus', 'Delphinapterus_leucas', 'Delphinus_delphis', 'Erignathus_barbatus', 'Eubalaena_australis', 'Eubalaena_glacialis', 'Globicephala_macrorhynchus', 'Globicephala_melas', 'Grampus_griseus', 'Hydrurga_leptonyx', 'Lagenodelphis_hosei', 'Lagenorhynchus_acutus', 'Lagenorhynchus_albirostris', 'Megaptera_novaeangliae', 'Monodon_monoceros', 'Odobenus_rosmarus', 'Ommatophoca_rossi', 'Orcinus_orca', 'Pagophilus_groenlandicus', 'Peponocephala_electra', 'Physeter_macrocephalus', 'Pseudorca_crassidens', 'Stenella_attenuata', 'Stenella_clymene', 'Stenella_coeruleoalba', 'Stenella_frontalis', 'Stenella_longirostris', 'Steno_bredanensis', 'Tursiops_truncatus']
         self.__device = device
         self.__batch_size = batch_size
         self.__train_set = MarineMammalDataset(os.path.join(data_path, "train.csv"), 
                                                os.path.join(data_path, "audio"), 
-                                               transform=self.transform, pad_to=pad_to)
+                                               pad_to=pad_to)
         self.__test_set = MarineMammalDataset(os.path.join(data_path, "test.csv"), 
                                                os.path.join(data_path, "audio"), 
-                                               transform=self.transform, pad_to=pad_to)
+                                               pad_to=pad_to)
         self.__validate_set = MarineMammalDataset(os.path.join(data_path, "validate.csv"), 
                                                os.path.join(data_path, "audio"), 
-                                               transform=self.transform, pad_to=pad_to)
+                                               pad_to=pad_to)
 
         print("Success: grabbed dataset.")
         print("Labels: {}".format(self.labels))
-        s_input = self.__train_set.__getitem__(0)[0].shape
-        print("Input shape:", s_input)
-            
-        self.n_input = s_input[0]
-        print("n_input:", self.n_input)
+        waveform, _ = self.__train_set.__getitem__(0)
+        self.transform = torchaudio.transforms.Resample(orig_freq=22050, new_freq=new_SR)
+        transformed = self.transform(waveform)
+        self.input_shape = transformed.shape
+        print("Input shape: {}, resampled to {}".format(self.input_shape, new_SR))
 
         if device == "cuda":
             num_workers = 1

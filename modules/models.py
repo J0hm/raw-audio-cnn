@@ -1,10 +1,8 @@
 import os
-from pandas.core.dtypes.common import is_datetime64_ns_dtype
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
 from modules.data_loader import SCLoader, MammalLoader
-
 
 
 def conv_layer(chann_in, chann_out, k_size, p_size, stride):
@@ -64,11 +62,11 @@ class AbstractModel(nn.Module):
 
 
 class VGG16(AbstractModel):
-    def __init__(self, identifier, n_input=1, n_output=35, n_channel=64):
+    def __init__(self, identifier, input_shape, n_output=35, n_channel=64):
         super().__init__("vgg16", identifier, n_channel)
-        
+        self.fc_channel_mul = round((input_shape[1]+1)/1000)-1
         self.features = nn.Sequential(
-            vgg_conv_block([n_input,n_channel], [n_channel,n_channel], [80,3], [1,1], [1,1], 4, 4),
+            vgg_conv_block([input_shape[0],n_channel], [n_channel,n_channel], [80,3], [1,1], [1,1], 4, 4),
             vgg_conv_block([n_channel,2*n_channel], [2*n_channel,2*n_channel], [3,3], [1,1], [1,1], 4, 4),
             vgg_conv_block([2*n_channel,4*n_channel,4*n_channel], [4*n_channel,4*n_channel,4*n_channel], [3,3,3], [1,1,1], [1,1,1], 4, 4),
             vgg_conv_block([4*n_channel,8*n_channel,8*n_channel], [8*n_channel,8*n_channel,8*n_channel], [3,3,3], [1,1,1], [1,1,1], 4, 4),
@@ -76,7 +74,7 @@ class VGG16(AbstractModel):
         )
 
         self.classifier = nn.Sequential(
-            vgg_fc_layer(8*n_channel*5, 64*n_channel),
+            vgg_fc_layer(8*n_channel*self.fc_channel_mul, 64*n_channel),
             vgg_fc_layer(64*n_channel, 64*n_channel),
             nn.Linear(64*n_channel, n_output),
         )
@@ -91,11 +89,11 @@ class VGG16(AbstractModel):
 
 
 class M5(AbstractModel):
-    def __init__(self, identifier, n_input=1, n_output=35, stride=4, n_channel=128):
+    def __init__(self, identifier, input_shape, n_output=35, stride=4, n_channel=128):
         super().__init__("m5", identifier, n_channel)
 
         self.features = nn.Sequential(
-            vgg_conv_block([n_input], [n_channel], [80], [38], [stride], 4, 4),
+            vgg_conv_block([input_shape[0]], [n_channel], [80], [38], [stride], 4, 4),
             vgg_conv_block([n_channel], [n_channel], [3], [1], [1], 4, 4),
             vgg_conv_block([n_channel], [2*n_channel], [3], [1], [1], 4, 4),
             vgg_conv_block([2*n_channel], [4*n_channel], [3], [1], [1], 4, 4)
@@ -112,10 +110,10 @@ class M5(AbstractModel):
 
 
 class M11(AbstractModel):
-    def __init__(self, identifier, n_input=1, n_output=35, stride=4, n_channel=64):
+    def __init__(self, identifier, input_shape, n_output=35, stride=4, n_channel=64):
         super().__init__("m11", identifier, n_channel) 
         self.features = nn.Sequential(
-            vgg_conv_block([n_input], [n_channel], [80], [38], [stride], 4, 4),
+            vgg_conv_block([input_shape[0]], [n_channel], [80], [38], [stride], 4, 4),
             vgg_conv_block([n_channel, n_channel], [n_channel, n_channel], [3, 3], [1, 1], [1, 1], 4, 4),
             vgg_conv_block([n_channel, 2*n_channel], [2*n_channel, 2*n_channel], [3, 3], [1, 1], [1, 1], 4, 4),
             vgg_conv_block([2*n_channel, 4*n_channel, 4*n_channel], [4*n_channel, 4*n_channel, 4*n_channel], [3, 3, 3], [1, 1, 1], [1, 1, 1], 4, 4),
@@ -162,7 +160,7 @@ def loadModel(model_name, batch_size, sample_rate, device, model_folder="models"
     # using the parameters stored in the model name
     model = models[params[0]](
             params[1],
-            n_input=data.n_input,
+            input_shape=data.input_shape,
             n_output=len(data.labels),
             n_channel=int(params[2])
         )
