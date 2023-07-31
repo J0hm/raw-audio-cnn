@@ -94,7 +94,7 @@ class M5(AbstractModel):
         return F.log_softmax(x, dim=2)
 
 
-class M11(nn.Module):
+class M11(AbstractModel):
     def __init__(self, n_input=1, n_output=35, stride=4, n_channel=64):
         super().__init__()
         self.features = nn.Sequential(

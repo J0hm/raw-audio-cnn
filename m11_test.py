@@ -1,6 +1,6 @@
 import torch
 import torch.nn as nn
-from data_loader import SCLoader
+from data_loader import MammalLoader
 from visualizer import LossVisualizer
 from models import M11
 from train import train, test
@@ -12,14 +12,14 @@ torch.set_flush_denormal(True)
 # ---------- HYPERPARAMETERS ----------
 batch_size = 256
 new_sample_rate = 8000 
-n_channel = 64
+n_channel = 64 # 64 for full model
 num_epochs = 120
 learning_rate = 0.01 
 # ------------------------------------
 
-scloader = SCLoader(device, batch_size, new_sample_rate)
-n_output = len(scloader.labels)
-model = M11(n_input=scloader.n_input, n_output=n_output, n_channel=n_channel)
+loader = MammalLoader(device, batch_size, new_sample_rate)
+n_output = len(loader.labels)
+model = M11(n_input=loader.n_input, n_output=n_output, n_channel=n_channel)
 model.to(device)
 print(model)
 print("Number of parameters:", model.count_params())
@@ -31,6 +31,8 @@ scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer, patience=3, ve
 visualizer = LossVisualizer("M11 Training Loss")
 
 for epoch in range(0, num_epochs):
-    epoch_loss = train(model, scloader.transform, criterion, optimizer, scheduler, epoch, scloader.train_loader, device)
+    epoch_loss = train(model, loader.transform, criterion, optimizer, scheduler, epoch, loader.train_loader, device)
     visualizer.append_loss(epoch, epoch_loss)
-    test(model, scloader.transform, epoch, scloader.test_loader, device)
+    test(model, loader.transform, epoch, loader.test_loader, device)
+
+model.save_model("saved/m11_marine_64_120.pt")

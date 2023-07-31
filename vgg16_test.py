@@ -1,6 +1,6 @@
 import torch
 import torch.nn as nn
-from data_loader import SCLoader
+from data_loader import MammalLoader
 from visualizer import LossVisualizer
 from models import VGG16
 from train import train, test
@@ -12,7 +12,7 @@ torch.set_flush_denormal(True)
 # ---------- HYPERPARAMETERS ----------
 batch_size = 256
 new_sample_rate = 8000 # BE VERY CAREFUL CHANGING THIS. Input size changes FC_CHANNEL_MUL must be cchanged too
-fc_channel_mul = 7 # SR->MUL: 2000->1, 4000->3, 8000->7, 16000->15. 2*SR->2*MUL(SR)+1
+fc_channel_mul = 5 # SR->MUL: 2000->1, 4000->3, 8000->7, 16000->15. 2*SR->2*MUL(SR)+1
 n_channel = 64
 num_epochs = 120
 learning_rate = 0.01 # 0.001 in original network
@@ -22,7 +22,7 @@ learning_rate = 0.01 # 0.001 in original network
 use_class_weights = True 
 # ------------------------------------
 
-scloader = SCLoader(device, batch_size, new_sample_rate)
+scloader = MammalLoader(device, batch_size, new_sample_rate)
 model = VGG16(scloader.n_input,
               n_output=len(scloader.labels),
               n_channel=n_channel, 
