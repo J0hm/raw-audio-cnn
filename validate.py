@@ -1,7 +1,12 @@
 import torch
-from model_loader import loadModel
-from train import test
+import argparse
+from modules.models import loadModel
+from modules.train import test
 
+#parser = argparse.ArgumentParser()
+#parser.add_argument("model", help="Model to validate")
+#parser.add_argument("-b", "--batchSize", help="Size of each batch", type=int, default=256)
+#parser.add_argument("-r", "--sampleRate", help="Sample rate to resample to.", type=int, default=8000)
 
 if __name__ == '__main__':
     model_name = "m11_marine_64_120.pt"

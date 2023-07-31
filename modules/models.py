@@ -1,5 +1,5 @@
-from abc import ABC
 import os
+from pandas.core.dtypes.common import is_datetime64_ns_dtype
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
@@ -34,17 +34,29 @@ def vgg_fc_layer(size_in, size_out, dropout=True):
 
 
 
-class AbstractModel(ABC, nn.Module):
-    def save_model(self, path):
-        torch.save(self.state_dict(), path)
+class AbstractModel(nn.Module):
+    def __init__(self, modeltype, identifier, n_channel):
+        super(AbstractModel, self).__init__()
+        self.modeltype = modeltype
+        self.n_channel = n_channel
+        self.identifier = identifier
 
-    def save_checkpoint(self, optimizer, epoch, loss, path):
+    def save_model(self, epoch=None, path="models"):
+        name = "{}_{}_{}.pt".format(self.modeltype, self.identifier, self.n_channel)
+        if(epoch):
+            name = "{}_{}_{}_{}.pt".format(self.modeltype, self.identifier, self.n_channel, epoch)
+
+        torch.save(self.state_dict(), os.path.join(path, name))
+
+    def save_checkpoint(self, optimizer, epoch, loss, path="models"):
+        name = "{}_{}_{}_{}_ckpt.pt".format(self.modeltype, self.identifier, self.n_channel, epoch)
+        
         torch.save({
             'epoch': epoch,
             'model_state_dict': self.state_dict(),
             'optimizer_state_dict': optimizer.state_dict(),
             'loss': loss,
-            }, path)
+            }, os.path.join(path, name))
 
     def count_params(self):
         return sum(p.numel() for p in self.parameters() if p.requires_grad)
@@ -52,9 +64,9 @@ class AbstractModel(ABC, nn.Module):
 
 
 class VGG16(AbstractModel):
-    def __init__(self, n_input=1, n_output=35, n_channel=64, fc_channel_mul=7):
-        super().__init__()
-
+    def __init__(self, identifier, n_input=1, n_output=35, n_channel=64):
+        super().__init__("vgg16", identifier, n_channel)
+        
         self.features = nn.Sequential(
             vgg_conv_block([n_input,n_channel], [n_channel,n_channel], [80,3], [1,1], [1,1], 4, 4),
             vgg_conv_block([n_channel,2*n_channel], [2*n_channel,2*n_channel], [3,3], [1,1], [1,1], 4, 4),
@@ -64,7 +76,7 @@ class VGG16(AbstractModel):
         )
 
         self.classifier = nn.Sequential(
-            vgg_fc_layer(8*n_channel*fc_channel_mul, 64*n_channel),
+            vgg_fc_layer(8*n_channel*5, 64*n_channel),
             vgg_fc_layer(64*n_channel, 64*n_channel),
             nn.Linear(64*n_channel, n_output),
         )
@@ -79,8 +91,9 @@ class VGG16(AbstractModel):
 
 
 class M5(AbstractModel):
-    def __init__(self, n_input=1, n_output=35, stride=4, n_channel=128):
-        super().__init__()
+    def __init__(self, identifier, n_input=1, n_output=35, stride=4, n_channel=128):
+        super().__init__("m5", identifier, n_channel)
+
         self.features = nn.Sequential(
             vgg_conv_block([n_input], [n_channel], [80], [38], [stride], 4, 4),
             vgg_conv_block([n_channel], [n_channel], [3], [1], [1], 4, 4),
@@ -99,8 +112,8 @@ class M5(AbstractModel):
 
 
 class M11(AbstractModel):
-    def __init__(self, n_input=1, n_output=35, stride=4, n_channel=64):
-        super().__init__()
+    def __init__(self, identifier, n_input=1, n_output=35, stride=4, n_channel=64):
+        super().__init__("m11", identifier, n_channel) 
         self.features = nn.Sequential(
             vgg_conv_block([n_input], [n_channel], [80], [38], [stride], 4, 4),
             vgg_conv_block([n_channel, n_channel], [n_channel, n_channel], [3, 3], [1, 1], [1, 1], 4, 4),
@@ -148,6 +161,7 @@ def loadModel(model_name, batch_size, sample_rate, device, model_folder="models"
     # build the model from the appropriate constructor,
     # using the parameters stored in the model name
     model = models[params[0]](
+            params[1],
             n_input=data.n_input,
             n_output=len(data.labels),
             n_channel=int(params[2])

@@ -245,5 +245,3 @@ class MammalLoader():
 
         print("Using weights:", weights)
         return weights
-
-
