@@ -53,11 +53,14 @@ if __name__ == '__main__':
     print("Running on {}".format(device))
     torch.set_flush_denormal(True)
 
-    loader = datasets.supported[args.dataset](device, args.batchSize, args.sampleRate)
+    loader = datasets.supported[args.dataset](
+            device=device, 
+            batch_size=args.batchSize, 
+            new_SR=args.sampleRate)
 
     model = model_constructor(
             identifier, 
-            n_input=loader.n_input, 
+            input_shape=loader.input_shape, 
             n_output=len(loader.labels),
             n_channel=channels
         )
