@@ -1,4 +1,5 @@
 from tqdm import tqdm
+from sklearn import metrics
 import numpy
 
 def train(model, transform, criterion, optimizer, scheduler, epoch, loader, device, verbose=False, log_interval=10):
@@ -41,11 +42,14 @@ def get_likely_index(tensor):
     # find most likely label index for each element in the batch
     return tensor.argmax(dim=-1)
 
-def test(model, transform, epoch, loader, device, verbose=False):
+def test(model, transform, epoch, loader, device, verbose=False, labels=None):
     model.eval()
     correct = 0
     counts_pred = numpy.zeros(35, dtype = int)
     counts_actual = numpy.zeros(35, dtype = int)
+
+    pred_list = []
+    actual_list = []
 
     for data, target in loader:
         data = data.to(device)
@@ -60,13 +64,13 @@ def test(model, transform, epoch, loader, device, verbose=False):
 
         for p in pred:
             counts_pred[p] += 1
+            pred_list.append(p.item())
         for l in target:
             counts_actual[l] += 1
-
+            actual_list.append(l.item())
+    
     if(verbose):
-        print("Predicted label counts:\n", counts_pred)
-        print("Actual label counts:\n", counts_actual)
-        print("Diff:\n", (counts_pred-counts_actual))
+        print(metrics.classification_report(actual_list, pred_list, digits=3, target_names=labels))
 
     print(f"\nTest Epoch: {epoch}\tAccuracy: {correct}/{len(loader.dataset)} ({100. * correct / len(loader.dataset):.0f}%)\n")
     return correct/len(loader.dataset)
