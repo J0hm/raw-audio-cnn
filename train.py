@@ -90,7 +90,7 @@ if __name__ == '__main__':
     for epoch in range(0, args.epochs):
         epoch_loss = train(model, loader.transform, criterion, optimizer, scheduler, epoch, loader.train_loader, device)
         accuracy = test(model, loader.transform, epoch, loader.test_loader, device)
-        loss_visualizer.append_loss(epoch, epoch_loss)
+        loss_visualizer.append(epoch, epoch_loss)
         accuracy_visualizer.append(epoch, accuracy)
 
     model.save_model(args.epochs)
