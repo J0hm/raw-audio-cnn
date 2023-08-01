@@ -51,9 +51,6 @@ def test(model, transform, epoch, loader, device, verbose=False):
         data = data.to(device)
         target = target.to(device)
         
-        for l in target:
-            counts_actual[l] += 1
-
         # apply transform and model on whole batch directly on device
         data = transform(data)
         output = model(data)
@@ -63,6 +60,8 @@ def test(model, transform, epoch, loader, device, verbose=False):
 
         for p in pred:
             counts_pred[p] += 1
+        for l in target:
+            counts_actual[l] += 1
 
     if(verbose):
         print("Predicted label counts:\n", counts_pred)
@@ -70,4 +69,5 @@ def test(model, transform, epoch, loader, device, verbose=False):
         print("Diff:\n", (counts_pred-counts_actual))
 
     print(f"\nTest Epoch: {epoch}\tAccuracy: {correct}/{len(loader.dataset)} ({100. * correct / len(loader.dataset):.0f}%)\n")
+    return correct/len(loader.dataset)
 
