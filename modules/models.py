@@ -166,7 +166,7 @@ loaders = {
 
 
 
-def loadModel(model_name, batch_size, sample_rate, device, model_folder="models"):
+def loadModelInfer(model_name, batch_size, sample_rate, device, model_folder="models"):
     path = os.path.join(model_folder, model_name)
     params = model_name.split("_")
     
@@ -182,6 +182,25 @@ def loadModel(model_name, batch_size, sample_rate, device, model_folder="models"
             input_shape=data.input_shape,
             n_output=len(data.labels),
             n_channel=int(params[2])
+        )
+
+    model.load_state_dict(torch.load(path, map_location=torch.device(device)))
+    model.eval()
+
+    return (model, data)
+
+def loadModel(model_path, model_type, dataset_type, batch_size, sample_rate, channels, device, model_folder="models"):
+    path = os.path.join(model_folder, model_path)
+    
+    # constrct the data loader from the given parameters
+    data = loaders[dataset_type](device, batch_size, sample_rate)
+
+    # build the model from the appropriate constructor
+    model = models[model_type](
+            dataset_type,
+            input_shape=data.input_shape,
+            n_output=len(data.labels),
+            n_channel=channels
         )
 
     model.load_state_dict(torch.load(path, map_location=torch.device(device)))
