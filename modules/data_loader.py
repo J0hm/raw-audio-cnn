@@ -154,8 +154,8 @@ class MarineMammalDataset(Dataset):
         return (waveform, label)
 
 class MammalLoader():
-    def __init__(self, device, batch_size, new_SR, pad_to=2, data_path="marineaudio/datasets/len2/"):
-        self.labels = ['Balaena_mysticetus', 'Balaenoptera_acutorostrata', 'Balaenoptera_physalus', 'Delphinapterus_leucas', 'Delphinus_delphis', 'Erignathus_barbatus', 'Eubalaena_australis', 'Eubalaena_glacialis', 'Globicephala_macrorhynchus', 'Globicephala_melas', 'Grampus_griseus', 'Hydrurga_leptonyx', 'Lagenodelphis_hosei', 'Lagenorhynchus_acutus', 'Lagenorhynchus_albirostris', 'Megaptera_novaeangliae', 'Monodon_monoceros', 'Odobenus_rosmarus', 'Ommatophoca_rossi', 'Orcinus_orca', 'Pagophilus_groenlandicus', 'Peponocephala_electra', 'Physeter_macrocephalus', 'Pseudorca_crassidens', 'Stenella_attenuata', 'Stenella_clymene', 'Stenella_coeruleoalba', 'Stenella_frontalis', 'Stenella_longirostris', 'Steno_bredanensis', 'Tursiops_truncatus']
+    def __init__(self, device, batch_size, new_SR, pad_to=1, data_path="marineaudio/datasets/len1/"):
+        self.labels = ['Balaena_mysticetus', 'Balaenoptera_physalus', 'Delphinapterus_leucas', 'Delphinus_delphis', 'Erignathus_barbatus', 'Eubalaena_australis', 'Eubalaena_glacialis', 'Globicephala_macrorhynchus', 'Globicephala_melas', 'Grampus_griseus', 'Hydrurga_leptonyx', 'Lagenodelphis_hosei', 'Lagenorhynchus_acutus', 'Lagenorhynchus_albirostris', 'Megaptera_novaeangliae', 'Monodon_monoceros', 'Odobenus_rosmarus', 'Ommatophoca_rossi', 'Orcinus_orca', 'Pagophilus_groenlandicus', 'Peponocephala_electra', 'Physeter_macrocephalus', 'Pseudorca_crassidens', 'Stenella_attenuata', 'Stenella_clymene', 'Stenella_coeruleoalba', 'Stenella_frontalis', 'Stenella_longirostris', 'Steno_bredanensis', 'Tursiops_truncatus']
         self.__device = device
         self.__batch_size = batch_size
         self.__train_set = MarineMammalDataset(os.path.join(data_path, "train.csv"), 
