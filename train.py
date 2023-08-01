@@ -26,7 +26,7 @@ parser.add_argument("-b", "--batchSize", help="Size of each batch", type=int, de
 parser.add_argument("-r", "--sampleRate", help="Sample rate to resample to.", type=int, default=8000)
 parser.add_argument("-c", "--channels", help="Number of channels to use.", type=int)
 parser.add_argument("-p", "--patience", help="Number of epochs to wait before reducing LR on plateau", type=int, default=5)
-parser.add_argument("-v", "--verbose", help="Currently unsupported.", action="store_true")
+parser.add_argument("-v", "--verbose", help="Enables extra logging.", action="store_true")
 
 def buildOptimizer(optim_type, params, lr):
     if optim_type == "SGD":
@@ -89,7 +89,7 @@ if __name__ == '__main__':
     epoch_loss = 0
     for epoch in range(0, args.epochs):
         epoch_loss = train(model, loader.transform, criterion, optimizer, scheduler, epoch, loader.train_loader, device)
-        accuracy = test(model, loader.transform, epoch, loader.test_loader, device)
+        accuracy = test(model, loader.transform, epoch, loader.test_loader, device, verbose=args.verbose, labels=loader.labels)
         loss_visualizer.append(epoch, epoch_loss)
         accuracy_visualizer.append(epoch, accuracy)
 
