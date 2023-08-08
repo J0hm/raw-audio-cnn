@@ -9,6 +9,7 @@ import pandas as pd
 import random
 import numpy as np
 import time
+import sys
 
 # idea for balancing dataset: make all possible segments and store them in their "bucket"
 # then, select randomly from the buckets. remove selected item, continue until a bucket is empty
@@ -79,21 +80,57 @@ def optimize_bins(cap_a, cap_b, weights, in_a=0, in_b=0, idx=0, a=[], b=[], seen
 
         return opt_a if opt_a[0] < opt_b[0] else opt_b
 
+def optimize_bins_3(cap_a, cap_b, cap_c, weights, in_a=0, in_b=0, in_c=0, idx=0, a=[], b=[], c=[], seen=dict(), root=True):
+    if(root):
+        seen.clear()
+
+    p = abs(cap_a-in_a)+abs(cap_b-in_b)+abs(cap_c-in_c)
+
+    if(idx==len(weights)):
+        return (p,a,b,c) 
+    else:
+        opt = dict()
+        e = weights[idx]
+        key_a = hash((in_a+e, in_b, in_c))
+        key_b = hash((in_a, in_b+e, in_c))
+        key_c = hash((in_a, in_b, in_c+e))
+        if(key_a in seen):
+            opt['a'] = seen[key_a]
+        else:
+            opt['a'] = optimize_bins_3(cap_a, cap_b, cap_c, weights, in_a+e, in_b, in_c, idx+1, a+[e], b, c, seen, False)
+            seen[key_a] = opt['a']
+        if(key_b in seen):
+            opt['b'] = seen[key_b]
+        else:
+            opt['b'] = optimize_bins_3(cap_a, cap_b, cap_c, weights, in_a, in_b+e, in_c, idx+1, a, b+[e], c, seen, False)
+            seen[key_b] = opt['b']
+        if(key_c in seen):
+            opt['c'] = seen[key_c]
+        else:
+            opt['c'] = optimize_bins_3(cap_a, cap_b, cap_c, weights, in_a, in_b, in_c+e, idx+1, a, b, c+[e], seen, False)
+            seen[key_c] = opt['c']
+
+
+        return opt[min(opt, key=lambda key:opt[key][0])]
+
+
+
+
 # ideas: cache already calculated P, indexed by (a, b)
 
 # two options: add next elem to a or b
 # index the DP table by the weight of a and b
 # store the optimal weights so far
 
-
-n_items = 6
-data = [random.choice(range(1, 20)) for _ in range(n_items)]
-cap = ceil(sum(data)/2)
+sys.setrecursionlimit(3200)
+n_items = 90
+data = [random.choice(range(10, 20)) for _ in range(n_items)]
+cap = ceil(sum(data)/3)
 start = time.time()
-p, a, b = optimize_bins(cap, cap, data)
+p, a, b, c = optimize_bins_3(cap, cap, cap, data)
 end = time.time()
 print("{}ms elapsed to do {} items".format((end-start)*1000, len(data)))
-print(p, sum(a), sum(b), len(a), len(b), a, b)
+print(p, sum(a), sum(b), sum(c), len(a), len(b), len(c), a, b, c)
 
 #sample_list = [[] for _ in range(num_classes)] # create sample store
 #for label, subdir in enumerate(tqdm(labels)):
