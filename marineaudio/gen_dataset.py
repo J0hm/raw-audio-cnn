@@ -51,65 +51,45 @@ def sample_audio(audio, overlap, sample_length, sigma=0.1):
 
 # returns two lists of indexes, optimizing the total weight of list 1 to be ratio*total_weight and
 # the total weight of list 2 to be (1-ratio)*total_weight
+total_its = 0
+hash_hits = 0
+table_pop = 0
+short_circuit_ct = 0
 
 
-# DP time!
-def optimize_bins(cap_a, cap_b, weights, in_a=0, in_b=0, idx=0, a=[], b=[], seen=dict(), root=True):
+def optimize_bins_3(cap_a, cap_b, cap_c, weights, idx=0, seen=dict(), root=True, in_a=0, in_b=0, in_c=0, a=[], b=[], c=[]):
+    global total_its, hash_hits, table_pop, short_circuit_ct
     if(root):
         seen.clear()
-        in_a, in_b, idx = 0, 0, 0
-        a, b = [], []
 
-    p = abs(cap_a-in_a)+abs(cap_b-in_b)
-    if(idx==len(weights)):
-        return (p,a,b) 
-    else:
-        e = weights[idx]
-        key_a = hash((in_a+e, in_b))
-        key_b = hash((in_a, in_b+e))
-        if(key_a in seen):
-            opt_a = seen[key_a]
-        else:
-            opt_a = optimize_bins(cap_a, cap_b, weights, in_a+e, in_b, idx+1, a+[e], b, seen, root=False)
-            seen[key_a] = opt_a
-        if(key_b in seen):
-            opt_b=seen[key_b]
-        else:
-            opt_b = optimize_bins(cap_a, cap_b, weights, in_a, in_b+e, idx+1, a, b+[e], seen, root=False)
-            seen[key_b] = opt_b
-
-        return opt_a if opt_a[0] < opt_b[0] else opt_b
-
-def optimize_bins_3(cap_a, cap_b, cap_c, weights, in_a=0, in_b=0, in_c=0, idx=0, a=[], b=[], c=[], seen=dict(), root=True):
-    if(root):
-        seen.clear()
+    total_its += 1
 
     p = abs(cap_a-in_a)+abs(cap_b-in_b)+abs(cap_c-in_c)
 
     if(idx==len(weights)):
-        return (p,a,b,c) 
+        return (p,a,b,c)
+    elif(in_a > cap_a or in_b > cap_b or in_c > cap_c):
+        short_circuit_ct += 1
+        return (9999999, a, b, c)
     else:
         opt = dict()
         e = weights[idx]
-        key_a = hash((in_a+e, in_b, in_c))
-        key_b = hash((in_a, in_b+e, in_c))
-        key_c = hash((in_a, in_b, in_c+e))
-        if(key_a in seen):
-            opt['a'] = seen[key_a]
-        else:
-            opt['a'] = optimize_bins_3(cap_a, cap_b, cap_c, weights, in_a+e, in_b, in_c, idx+1, a+[e], b, c, seen, False)
-            seen[key_a] = opt['a']
-        if(key_b in seen):
-            opt['b'] = seen[key_b]
-        else:
-            opt['b'] = optimize_bins_3(cap_a, cap_b, cap_c, weights, in_a, in_b+e, in_c, idx+1, a, b+[e], c, seen, False)
-            seen[key_b] = opt['b']
-        if(key_c in seen):
-            opt['c'] = seen[key_c]
-        else:
-            opt['c'] = optimize_bins_3(cap_a, cap_b, cap_c, weights, in_a, in_b, in_c+e, idx+1, a, b, c+[e], seen, False)
-            seen[key_c] = opt['c']
-
+        sizes = {'a': (in_a+e, in_b, in_c),
+                 'b': (in_a, in_b+e, in_c),
+                 'c': (in_a, in_b, in_c+e)}
+        lists = {'a': [a+[e], b, c],
+                 'b': [a, b+[e], c],
+                 'c': [a, b, c+[e]]}
+        
+        for k in sizes: # 'a', 'b', 'c'
+            h = hash(sizes[k]) # hash inputs[k] to get the seen dict key
+            if(h in seen):
+                opt[k] = seen[h]
+                hash_hits+=1
+            else:
+                opt[k] = optimize_bins_3(cap_a, cap_b, cap_c, weights, idx+1, seen, False, *sizes[k], *lists[k])
+                seen[h] = opt[k]
+                table_pop +=1
 
         return opt[min(opt, key=lambda key:opt[key][0])]
 
@@ -123,14 +103,16 @@ def optimize_bins_3(cap_a, cap_b, cap_c, weights, in_a=0, in_b=0, in_c=0, idx=0,
 # store the optimal weights so far
 
 sys.setrecursionlimit(3200)
-n_items = 90
+n_items = 140
 data = [random.choice(range(10, 20)) for _ in range(n_items)]
 cap = ceil(sum(data)/3)
 start = time.time()
 p, a, b, c = optimize_bins_3(cap, cap, cap, data)
 end = time.time()
 print("{}ms elapsed to do {} items".format((end-start)*1000, len(data)))
-print(p, sum(a), sum(b), sum(c), len(a), len(b), len(c), a, b, c)
+print(p, sum(a), sum(b), sum(c), len(a), len(b), len(c))
+print((sum(a)+sum(b)+sum(c)==sum(data)), len(a)+len(b)+len(c)==len(data))
+print(total_its, table_pop, hash_hits, short_circuit_ct)
 
 #sample_list = [[] for _ in range(num_classes)] # create sample store
 #for label, subdir in enumerate(tqdm(labels)):
