@@ -55,9 +55,6 @@ total_its = 0
 hash_hits = 0
 short_circuit_ct = 0
 
-def pos_to_char(pos):
-    return chr(pos + 97)
-
 # TODO implement short circuting when in goes over cap.
 # ISSUE: must deal with the case where the optimal is subbranch of one of the short-circuited ones
 # this causes problems since we are populating our seen hashtable with incomplete sets,
@@ -99,8 +96,10 @@ def optimize_bins_3(cap_a, cap_b, cap_c, weights, idx=0, seen=dict(), root=True,
             else:
                 opt[k] = optimize_bins_3(cap_a, cap_b, cap_c, weights, idx+1, seen, False, *sizes[k], *lists[k])
                 seen[h] = opt[k]
-
-            # < num bins is the actual heuristic: with large enough datasets we usually have a solution mod num bins
+            
+            # short circuit hard if opt = 0, 1, 2
+            # < num bins is the actual heuristic: with large enough datasets the optimal P will be mod number of bins, so we take any solution that could be the optimal as optimal
+            # this prevents us from searching the entire tree for essentially no gain
             if(opt[k][0] < 3):                 
                 return opt[k]
 
