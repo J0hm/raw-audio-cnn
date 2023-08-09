@@ -38,7 +38,6 @@ def sample_audio(audio, overlap, sample_length, sigma=0.1):
     #start = random.uniform(0, duration/10)
     start = 0
     samples = []
-    # 0 .5 1 1.5 2 2.5 3
     # while we can still take a sample...
     while(start + sample_length <= duration):
         #norm_overlap = max(0, min(np.random.normal(overlap, sigma), 1)) # clamp to [0,1] just in case...
@@ -49,11 +48,8 @@ def sample_audio(audio, overlap, sample_length, sigma=0.1):
 
     return samples
 
-# returns two lists of indexes, optimizing the total weight of list 1 to be ratio*total_weight and
-# the total weight of list 2 to be (1-ratio)*total_weight
 total_its = 0
 hash_hits = 0
-short_circuit_ct = 0
 
 # TODO implement short circuting when in goes over cap.
 # ISSUE: must deal with the case where the optimal is subbranch of one of the short-circuited ones
@@ -63,7 +59,7 @@ short_circuit_ct = 0
 # i.e. at the opt[k] = optimize_bins_3(...) on line 100
 # this would require calculating P again, but that should be pretty quick
 def optimize_bins_3(cap_a, cap_b, cap_c, weights, idx=0, seen=dict(), root=True, in_a=0, in_b=0, in_c=0, a=[], b=[], c=[]):
-    global total_its, hash_hits, short_circuit_ct
+    global total_its, hash_hits 
     if(root):
         seen.clear()
 
@@ -72,7 +68,7 @@ def optimize_bins_3(cap_a, cap_b, cap_c, weights, idx=0, seen=dict(), root=True,
     diffs = (cap_a-in_a, cap_b-in_b, cap_c-in_c)
     p = abs(diffs[0]) + abs(diffs[1]) + abs(diffs[2])
 
-    if(len(a)+len(b)+len(c)==len(weights)):
+    if(len(a)+len(b)+len(c)==len(weights)): # base case
         return (p,a,b,c)
     else:
         opt = dict()
@@ -88,7 +84,7 @@ def optimize_bins_3(cap_a, cap_b, cap_c, weights, idx=0, seen=dict(), root=True,
         diffdict = {key:diffs[idx] for idx, key in enumerate(('a', 'b', 'c'))}
         eval_order = [k for k, _ in sorted(diffdict.items(), key=lambda item: item[1], reverse=True)]
 
-        for k in eval_order: # 'a', 'b', 'c'
+        for k in eval_order: # 'a', 'b', 'c' in whichever order we want to evaluate (greatest to least available space)
             h = hash(sizes[k]) # hash inputs[k] to get the seen dict key
             if(h in seen):
                 opt[k] = seen[h]
@@ -122,34 +118,34 @@ def test_func():
         print("{}ms elapsed to do {} items".format((end-start)*1000, len(data)))
         print(p, sum(a), sum(b), sum(c), len(a), len(b), len(c))
         print((sum(a)+sum(b)+sum(c)==sum(data)), len(a)+len(b)+len(c)==len(data))
-        print(total_its, hash_hits, short_circuit_ct)
+        print(total_its, hash_hits)
         its_sum += total_its
     print("Average iteratiosn: {}".format(its_sum/testct))
 
 
 
-
-sample_list = [[] for _ in range(num_classes)] # create sample store
-for label, subdir in enumerate(tqdm(labels)):
-    target = labels.index(subdir)
-    subdir_path = os.path.join(audio_dir, subdir)
-    for filename in os.listdir(subdir_path):
-        file_path = os.path.join(subdir_path, filename)
-        audio = pydub.AudioSegment.from_wav(file_path)
-        duration = audio.duration_seconds
-        samples = sample_audio(audio, overlap_amt, block_len)
-        if(len(samples) > 0):
-            sample_list[label].append(sample_audio(audio, overlap_amt, block_len))
+if __name__ == '__main__':
+    sample_list = [[] for _ in range(num_classes)] # create sample store
+    for label, subdir in enumerate(tqdm(labels)):
+        target = labels.index(subdir)
+        subdir_path = os.path.join(audio_dir, subdir)
+        for filename in os.listdir(subdir_path):
+            file_path = os.path.join(subdir_path, filename)
+            audio = pydub.AudioSegment.from_wav(file_path)
+            duration = audio.duration_seconds
+            samples = sample_audio(audio, overlap_amt, block_len)
+            if(len(samples) > 0):
+                sample_list[label].append(sample_audio(audio, overlap_amt, block_len))
    
-    data = [len(sample) for sample in sample_list[label]]
-    total = sum(data)
-    total_its, hash_hits, short_circuit_ct = 0,0,0
-    print("Optimizing for list of {} audio files with {} total samples.".format(len(data), total))
-    train_target, test_target, validate_target = [ceil(total*prop) for prop in set_splits]
-    print("Targets:", train_target, test_target, validate_target)
-    p, train, test, validate = optimize_bins_3(train_target, test_target, validate_target, data)
-    print("Optimizer p:", p)
-    print("Sums:", sum(train), sum(test), sum(validate))
-    print("{} its, {} hits, {} short circuit".format(total_its, hash_hits, short_circuit_ct))
-    assert len(train) + len(test) + len(validate) == len(data)
+        data = [len(sample) for sample in sample_list[label]]
+        total = sum(data)
+        total_its, hash_hits, short_circuit_ct = 0,0,0
+        print("Optimizing for list of {} audio files with {} total samples.".format(len(data), total))
+        train_target, test_target, validate_target = [ceil(total*prop) for prop in set_splits]
+        print("Targets:", train_target, test_target, validate_target)
+        p, train, test, validate = optimize_bins_3(train_target, test_target, validate_target, data)
+        print("Optimizer p:", p)
+        print("Sums:", sum(train), sum(test), sum(validate))
+        print("{} its, {} hits, {} short circuit".format(total_its, hash_hits, short_circuit_ct))
+        assert len(train) + len(test) + len(validate) == len(data)
     
