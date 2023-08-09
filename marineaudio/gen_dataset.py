@@ -105,10 +105,10 @@ def optimize_bins_3(cap_a, cap_b, cap_c, weights, idx=0, seen=dict(), root=True,
 
 def test_func():
     global total_its, hash_hits
-    n_items = 10000
+    n_items = 5000
     sys.setrecursionlimit(100000)
     its_sum = 0
-    testct = 50
+    testct = 25
     for _ in range(testct):
         total_its, hash_hits= 0,0
         data = [random.choice(range(10, 100)) for _ in range(n_items)]
@@ -118,12 +118,13 @@ def test_func():
         end = time.time()
         print("{}ms elapsed to do {} items".format((end-start)*1000, len(data)))
         print(p, sum(a), sum(b), sum(c), len(a), len(b), len(c))
-        print((sum(a)+sum(b)+sum(c)==sum(data)), len(a)+len(b)+len(c)==len(data))
         print(total_its, hash_hits)
+        assert sum(a)+sum(b)+sum(c)==sum(data)
+        assert len(a)+len(b)+len(c)==len(data)
         its_sum += total_its
     print("Average iterations: {}".format(its_sum/testct))
 
-if __name__ == '':
+if __name__ == '__mn__':
     test_func()
 
 if __name__ == '__main__':
