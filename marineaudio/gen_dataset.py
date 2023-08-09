@@ -104,12 +104,13 @@ def optimize_bins_3(cap_a, cap_b, cap_c, weights, idx=0, seen=dict(), root=True,
 
 
 def test_func():
+    global total_its, hash_hits
     n_items = 10000
-    sys.setrecursionlimit(20000)
+    sys.setrecursionlimit(100000)
     its_sum = 0
     testct = 50
     for _ in range(testct):
-        total_its, hash_hits, short_circuit_ct = 0,0,0
+        total_its, hash_hits= 0,0
         data = [random.choice(range(10, 100)) for _ in range(n_items)]
         cap = ceil(sum(data)/3)
         start = time.time()
@@ -120,9 +121,10 @@ def test_func():
         print((sum(a)+sum(b)+sum(c)==sum(data)), len(a)+len(b)+len(c)==len(data))
         print(total_its, hash_hits)
         its_sum += total_its
-    print("Average iteratiosn: {}".format(its_sum/testct))
+    print("Average iterations: {}".format(its_sum/testct))
 
-
+if __name__ == '':
+    test_func()
 
 if __name__ == '__main__':
     sample_list = [[] for _ in range(num_classes)] # create sample store
@@ -148,4 +150,5 @@ if __name__ == '__main__':
         print("Sums:", sum(train), sum(test), sum(validate))
         print("{} its, {} hits, {} short circuit".format(total_its, hash_hits, short_circuit_ct))
         assert len(train) + len(test) + len(validate) == len(data)
+        assert sum(train) + sum(test) + sum(validate) == sum(data)
     
