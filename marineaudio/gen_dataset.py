@@ -35,12 +35,12 @@ if not os.path.exists(audio_path):
 # pos_next = pos + (N(overlap, sigma)*sample_length)
 def sample_audio(audio, overlap, sample_length, sigma=0.1):
     duration = audio.duration_seconds 
-    #start = random.uniform(0, duration/10)
+    start = random.uniform(0, duration/10)
     start = 0
     samples = []
     # while we can still take a sample...
     while(start + sample_length <= duration):
-        #norm_overlap = max(0, min(np.random.normal(overlap, sigma), 1)) # clamp to [0,1] just in case...
+        norm_overlap = max(0, min(np.random.normal(overlap, sigma), 1)) # clamp to [0,1] just in case...
         norm_overlap = overlap
         split = audio[start*1000:(start+sample_length)*1000]
         samples.append(split)
@@ -73,9 +73,10 @@ def optimize_bins_3(cap_a, cap_b, cap_c, weights, idx=0, seen=dict(), root=True,
     else:
         opt = dict()
         e = weights[idx]
-        sizes = {'a': (in_a+e, in_b, in_c),
-                 'b': (in_a, in_b+e, in_c),
-                 'c': (in_a, in_b, in_c+e)}
+        ct = len(e)
+        sizes = {'a': (in_a+ct, in_b, in_c),
+                 'b': (in_a, in_b+ct, in_c),
+                 'c': (in_a, in_b, in_c+ct)}
         lists = {'a': [a+[e], b, c],
                  'b': [a, b+[e], c],
                  'c': [a, b, c+[e]]}
@@ -84,7 +85,7 @@ def optimize_bins_3(cap_a, cap_b, cap_c, weights, idx=0, seen=dict(), root=True,
         diffdict = {key:diffs[idx] for idx, key in enumerate(('a', 'b', 'c'))}
         eval_order = [k for k, _ in sorted(diffdict.items(), key=lambda item: item[1], reverse=True)]
 
-        for k in eval_order: # 'a', 'b', 'c' in whichever order we want to evaluate (greatest to least available space)
+        for k in eval_order: 
             h = hash(sizes[k]) # hash inputs[k] to get the seen dict key
             if(h in seen):
                 opt[k] = seen[h]
@@ -93,39 +94,13 @@ def optimize_bins_3(cap_a, cap_b, cap_c, weights, idx=0, seen=dict(), root=True,
                 opt[k] = optimize_bins_3(cap_a, cap_b, cap_c, weights, idx+1, seen, False, *sizes[k], *lists[k])
                 seen[h] = opt[k]
             
-            # short circuit hard if opt = 0, 1, 2
-            # < num bins is the actual heuristic: with large enough datasets the optimal P will be mod number of bins, so we take any solution that could be the optimal as optimal
-            # this prevents us from searching the entire tree for essentially no gain
+            # short circuit hard 
             if(opt[k][0] < 3):                 
                 return opt[k]
 
         return opt[min(opt, key=lambda key:opt[key][0])]
 
 
-
-def test_func():
-    global total_its, hash_hits
-    n_items = 5000
-    sys.setrecursionlimit(100000)
-    its_sum = 0
-    testct = 25
-    for _ in range(testct):
-        total_its, hash_hits= 0,0
-        data = [random.choice(range(10, 100)) for _ in range(n_items)]
-        cap = ceil(sum(data)/3)
-        start = time.time()
-        p, a, b, c = optimize_bins_3(cap, cap, cap, data)
-        end = time.time()
-        print("{}ms elapsed to do {} items".format((end-start)*1000, len(data)))
-        print(p, sum(a), sum(b), sum(c), len(a), len(b), len(c))
-        print(total_its, hash_hits)
-        assert sum(a)+sum(b)+sum(c)==sum(data)
-        assert len(a)+len(b)+len(c)==len(data)
-        its_sum += total_its
-    print("Average iterations: {}".format(its_sum/testct))
-
-if __name__ == '__mn__':
-    test_func()
 
 if __name__ == '__main__':
     sample_list = [[] for _ in range(num_classes)] # create sample store
@@ -140,16 +115,17 @@ if __name__ == '__main__':
             if(len(samples) > 0):
                 sample_list[label].append(sample_audio(audio, overlap_amt, block_len))
    
-        data = [len(sample) for sample in sample_list[label]]
-        total = sum(data)
+        data = sample_list[label]
+        total = sum([len(sample) for sample in data])
         total_its, hash_hits, short_circuit_ct = 0,0,0
         print("Optimizing for list of {} audio files with {} total samples.".format(len(data), total))
         train_target, test_target, validate_target = [ceil(total*prop) for prop in set_splits]
         print("Targets:", train_target, test_target, validate_target)
+
         p, train, test, validate = optimize_bins_3(train_target, test_target, validate_target, data)
         print("Optimizer p:", p)
-        print("Sums:", sum(train), sum(test), sum(validate))
-        print("{} its, {} hits, {} short circuit".format(total_its, hash_hits, short_circuit_ct))
+        print("File counts:", len(train), len(test), len(validate))
+        print("Search: {} its, {} hash hits\n\n".format(total_its, hash_hits))
         assert len(train) + len(test) + len(validate) == len(data)
-        assert sum(train) + sum(test) + sum(validate) == sum(data)
+        assert sum(len(s) for s in train) + sum(len(s) for s in test) + sum(len(s) for s in validate) == total
     
