@@ -41,16 +41,16 @@ class AbstractModel(nn.Module):
         self.identifier = identifier
         self.in_shape = in_shape
 
-    def save_model(self, name, path="models"):
-        torch.save(self.state_dict(), os.path.join(path, name))
+    def save_model(self, path):
+        torch.save(self.state_dict(), path)
 
-    def save_checkpoint(self, optimizer, epoch, loss, name, path="models"):
+    def save_checkpoint(self, optimizer, epoch, loss, path):
         torch.save({
             'epoch': epoch,
             'model_state_dict': self.state_dict(),
             'optimizer_state_dict': optimizer.state_dict(),
             'loss': loss,
-            }, os.path.join(path, name))
+            }, path)
 
     def count_params(self):
         return sum(p.numel() for p in self.parameters() if p.requires_grad)

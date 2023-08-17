@@ -63,7 +63,7 @@ class TrainDataManager:
             w.writerow([epoch, loss, train_accuracy, test_accuracy, precision, recall, f1])
 
     def save_model(self):
-        self.model.save_model(self.name, os.path.join(self.path, "model.pt"))
+        self.model.save_model(os.path.join(self.path, "model.pt"))
 
 
 
