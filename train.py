@@ -1,4 +1,5 @@
 import argparse
+from numpy import identity
 import torch
 import torch.nn as nn
 import torch.optim as optim
@@ -42,7 +43,7 @@ if __name__ == '__main__':
     args = parser.parse_args()
     defaults = default_settings[args.model]
     model_constructor, criterion, optimizer, channels, lr = defaults
-    identifier = args.dataset
+    identifier = "*"
 
     if(args.channels):
         channels = args.channels
@@ -61,7 +62,7 @@ if __name__ == '__main__':
             new_SR=args.sampleRate)
 
     model = model_constructor(
-            identifier, 
+            args.dataset, identifier,
             input_shape=loader.input_shape, 
             n_output=len(loader.labels),
             n_channel=channels
