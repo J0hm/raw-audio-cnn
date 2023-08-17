@@ -1,10 +1,7 @@
 import argparse
-from numpy import identity
 import torch
 import torch.nn as nn
 import torch.optim as optim
-from modules import visualizer
-from modules.visualizer import LossVisualizer, AccuracyVisualizer
 from modules.models import VGG16, M5, M11, M18
 from modules.train import train, test
 import modules.datasets as datasets
@@ -76,40 +73,10 @@ if __name__ == '__main__':
     optimizer = buildOptimizer(optimizer, model.parameters(), lr)
     scheduler = optim.lr_scheduler.ReduceLROnPlateau(optimizer, patience=args.patience, verbose=True)
 
-    loss_visualizer, accuracy_visualizer, train_accuracy_visualizer = None,None,None
-    if(args.verbose2):
-        loss_visualizer = LossVisualizer("{}, {}, {} channels, SR={}".format(
-            args.model, 
-            args.dataset,
-            channels,
-            args.sampleRate
-        ))
-
-        accuracy_visualizer = AccuracyVisualizer("{}, {}, {} channels, SR={}".format(
-            args.model, 
-            args.dataset,
-            channels,
-            args.sampleRate
-        ))
-
-        train_accuracy_visualizer = AccuracyVisualizer("Train accuracy {}, {}, {} channels, SR={}".format(
-            args.model, 
-            args.dataset,
-            channels,
-            args.sampleRate
-        ))
-
-
-
     epoch_loss = 0
     for epoch in range(0, args.epochs):
         epoch_loss = train(model, loader.transform, criterion, optimizer, scheduler, epoch, loader.train_loader, device)
         accuracy = test(model, loader.transform, epoch, loader.test_loader, device, verbose=args.verbose, labels=loader.labels)
         accuracy_train = test(model, loader.transform, epoch, loader.train_loader, device, verbose=args.verbose)
-
-        if(loss_visualizer and accuracy_visualizer and train_accuracy_visualizer):
-            loss_visualizer.append(epoch, epoch_loss)
-            accuracy_visualizer.append(epoch, accuracy)
-            train_accuracy_visualizer.append(epoch, accuracy_train)
 
     model.save_model(args.epochs)
