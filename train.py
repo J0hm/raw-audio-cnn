@@ -67,8 +67,6 @@ if __name__ == '__main__':
         )
 
     model.to(device)
-    #print(model)
-    #print("Number of parameters:", model.count_params())
     
     manager = TrainDataManager(model, lr, args.batchSize, args.epochs)
 
@@ -79,9 +77,9 @@ if __name__ == '__main__':
     epoch_loss = 0
     for epoch in range(0, args.epochs):
         epoch_loss = train(model, loader.transform, criterion, optimizer, scheduler, epoch, loader.train_loader, device)
-        accuracy = test(model, loader.transform, epoch, loader.test_loader, device, verbose=args.verbose, labels=loader.labels)
-        accuracy_train = test(model, loader.transform, epoch, loader.train_loader, device, verbose=args.verbose)
+        accuracy_test, macros = test(model, loader.transform, epoch, loader.test_loader, device, verbose=args.verbose, labels=loader.labels)
+        accuracy_train, _ = test(model, loader.transform, epoch, loader.train_loader, device, verbose=args.verbose)
 
-        manager.append_epoch(epoch, epoch_loss, accuracy_train, 0, accuracy, 0, 0, 0)
+        manager.append_epoch(epoch, epoch_loss, accuracy_train, accuracy_test, macros['precision'], macros['recall'], macros['f1-score'])
 
     manager.save_model()

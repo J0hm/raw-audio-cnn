@@ -69,9 +69,13 @@ def test(model, transform, epoch, loader, device, verbose=False, labels=None):
             counts_actual[l] += 1
             actual_list.append(l.item())
     
+    report = metrics.classification_report(actual_list, pred_list, digits=3, target_names=labels, output_dict=True)
+
+    
+
     if(verbose):
         print(metrics.classification_report(actual_list, pred_list, digits=3, target_names=labels))
 
     print(f"\nTest Epoch: {epoch}\tAccuracy: {correct}/{len(loader.dataset)} ({100. * correct / len(loader.dataset):.0f}%)\n")
-    return correct/len(loader.dataset)
+    return correct/len(loader.dataset), report['macro avg']
 

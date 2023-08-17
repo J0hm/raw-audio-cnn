@@ -16,6 +16,8 @@ def mkdir_p(path):
             pass
         else: raise
 
+
+# Manages training statistics
 class TrainDataManager:
     def __init__(self, model, lr, batch_size, epochs):
         self.model = model
@@ -54,13 +56,17 @@ class TrainDataManager:
             model_stats = summary(self.model, col_names=("num_params", "kernel_size")) 
             f.write(str(model_stats))
 
-    def append_epoch(self, epoch, train_loss, train_accuracy, test_loss, test_accuracy,
+    def append_epoch(self, epoch, loss, train_accuracy, test_accuracy,
                      precision, recall, f1):
         with open(os.path.join(self.path, "trainstats.csv"), 'a+') as csv_file:
             w = writer(csv_file)
-            w.writerow([epoch, train_loss, train_accuracy, test_loss, test_accuracy, precision, recall, f1])
+            w.writerow([epoch, loss, train_accuracy, test_accuracy, precision, recall, f1])
 
     def save_model(self):
         self.model.save_model(self.name, os.path.join(self.path, "model.pt"))
- 
 
+
+
+class ModelManager:
+    def __init__(self):
+        pass
