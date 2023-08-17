@@ -33,28 +33,24 @@ def vgg_fc_layer(size_in, size_out, dropout=True):
 
 
 class AbstractModel(nn.Module):
-    def __init__(self, modeltype, identifier, n_channel):
+    def __init__(self, modeltype, dataset, identifier, in_shape, n_channel):
         super(AbstractModel, self).__init__()
         self.modeltype = modeltype
         self.n_channel = n_channel
+        self.dataset = dataset
         self.identifier = identifier
+        self.in_shape = in_shape
 
-    def save_model(self, epoch=None, path="models"):
-        name = "{}_{}_{}.pt".format(self.modeltype, self.identifier, self.n_channel)
-        if(epoch):
-            name = "{}_{}_{}_{}.pt".format(self.modeltype, self.identifier, self.n_channel, epoch)
+    def save_model(self, path):
+        torch.save(self.state_dict(), path)
 
-        torch.save(self.state_dict(), os.path.join(path, name))
-
-    def save_checkpoint(self, optimizer, epoch, loss, path="models"):
-        name = "{}_{}_{}_{}_ckpt.pt".format(self.modeltype, self.identifier, self.n_channel, epoch)
-        
+    def save_checkpoint(self, optimizer, epoch, loss, path):
         torch.save({
             'epoch': epoch,
             'model_state_dict': self.state_dict(),
             'optimizer_state_dict': optimizer.state_dict(),
             'loss': loss,
-            }, os.path.join(path, name))
+            }, path)
 
     def count_params(self):
         return sum(p.numel() for p in self.parameters() if p.requires_grad)
@@ -62,9 +58,9 @@ class AbstractModel(nn.Module):
 
 
 class VGG16(AbstractModel):
-    def __init__(self, identifier, input_shape, n_output=35, n_channel=64):
-        super().__init__("vgg16", identifier, n_channel)
-        self.fc_channel_mul = round((input_shape[1]+1)/1000)-1
+    def __init__(self, dataset, identifier, input_shape, n_output=35, n_channel=64):
+        super().__init__("vgg16", dataset, identifier, input_shape, n_channel)
+        self.fc_channel_mul = round((input_shape[1]+1)/1000)-1 # dont worry about this voodoo magic
         self.features = nn.Sequential(
             vgg_conv_block([input_shape[0],n_channel], [n_channel,n_channel], [80,3], [1,1], [1,1], 4, 4),
             vgg_conv_block([n_channel,2*n_channel], [2*n_channel,2*n_channel], [3,3], [1,1], [1,1], 4, 4),
@@ -89,8 +85,8 @@ class VGG16(AbstractModel):
 
 
 class M5(AbstractModel):
-    def __init__(self, identifier, input_shape, n_output=35, stride=4, n_channel=128):
-        super().__init__("m5", identifier, n_channel)
+    def __init__(self, dataset, identifier, input_shape, n_output=35, stride=4, n_channel=128):
+        super().__init__("m5", dataset, identifier, input_shape, n_channel)
 
         self.features = nn.Sequential(
             vgg_conv_block([input_shape[0]], [n_channel], [80], [38], [stride], 4, 4),
@@ -110,8 +106,8 @@ class M5(AbstractModel):
 
 
 class M11(AbstractModel):
-    def __init__(self, identifier, input_shape, n_output=35, stride=4, n_channel=64):
-        super().__init__("m11", identifier, n_channel) 
+    def __init__(self, dataset, identifier, input_shape, n_output=35, stride=4, n_channel=64):
+        super().__init__("m11", dataset, identifier, input_shape, n_channel) 
         self.features = nn.Sequential(
             vgg_conv_block([input_shape[0]], [n_channel], [80], [38], [stride], 4, 4),
             vgg_conv_block([n_channel, n_channel], [n_channel, n_channel], [3, 3], [1, 1], [1, 1], 4, 4),
@@ -131,8 +127,8 @@ class M11(AbstractModel):
 
 
 class M18(AbstractModel):
-    def __init__(self, identifier, input_shape, n_output=35, stride=4, n_channel=64):
-        super().__init__("m18", identifier, n_channel)
+    def __init__(self, dataset, identifier, input_shape, n_output=35, stride=4, n_channel=64):
+        super().__init__("m18", dataset, identifier, input_shape, n_channel)
         self.features = nn.Sequential(
             vgg_conv_block([input_shape[0]], [n_channel], [80], [38], [stride], 4, 4),
             vgg_conv_block([n_channel]*4, [n_channel]*4, [3]*4, [1]*4, [1]*4, 4, 4),
@@ -178,7 +174,7 @@ def loadModelInfer(model_name, batch_size, sample_rate, device, model_folder="mo
     # build the model from the appropriate constructor,
     # using the parameters stored in the model name
     model = models[params[0]](
-            params[1],
+            params[1], "*",
             input_shape=data.input_shape,
             n_output=len(data.labels),
             n_channel=int(params[2])
@@ -189,21 +185,19 @@ def loadModelInfer(model_name, batch_size, sample_rate, device, model_folder="mo
 
     return (model, data)
 
-def loadModel(model_path, model_type, dataset_type, batch_size, sample_rate, channels, device, model_folder="models"):
-    path = os.path.join(model_folder, model_path)
-    
+def loadModel(model_path, model_type, dataset_type, batch_size, sample_rate, channels, device):
     # constrct the data loader from the given parameters
     data = loaders[dataset_type](device, batch_size, sample_rate)
 
     # build the model from the appropriate constructor
     model = models[model_type](
-            dataset_type,
+            dataset_type, "*",
             input_shape=data.input_shape,
             n_output=len(data.labels),
             n_channel=channels
         )
 
-    model.load_state_dict(torch.load(path, map_location=torch.device(device)))
+    model.load_state_dict(torch.load(model_path, map_location=torch.device(device)))
     model.eval()
 
     return (model, data)

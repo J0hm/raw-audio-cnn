@@ -2,10 +2,9 @@ import argparse
 import torch
 import torch.nn as nn
 import torch.optim as optim
-from modules import visualizer
-from modules.visualizer import LossVisualizer, AccuracyVisualizer
 from modules.models import VGG16, M5, M11, M18
 from modules.train import train, test
+from modules.data_management import TrainDataManager
 import modules.datasets as datasets
 
 default_settings = {
@@ -27,6 +26,8 @@ parser.add_argument("-r", "--sampleRate", help="Sample rate to resample to.", ty
 parser.add_argument("-c", "--channels", help="Number of channels to use.", type=int)
 parser.add_argument("-p", "--patience", help="Number of epochs to wait before reducing LR on plateau", type=int, default=5)
 parser.add_argument("-v", "--verbose", help="Enables extra logging.", action="store_true")
+parser.add_argument("-v2", "--verbose2", help="Enables extra logging and visdom.", action="store_true")
+
 
 def buildOptimizer(optim_type, params, lr):
     if optim_type == "SGD":
@@ -40,7 +41,7 @@ if __name__ == '__main__':
     args = parser.parse_args()
     defaults = default_settings[args.model]
     model_constructor, criterion, optimizer, channels, lr = defaults
-    identifier = args.dataset
+    identifier = "*"
 
     if(args.channels):
         channels = args.channels
@@ -59,38 +60,26 @@ if __name__ == '__main__':
             new_SR=args.sampleRate)
 
     model = model_constructor(
-            identifier, 
+            args.dataset, identifier,
             input_shape=loader.input_shape, 
             n_output=len(loader.labels),
             n_channel=channels
         )
 
     model.to(device)
-    print(model)
-    print("Number of parameters:", model.count_params())
+    
+    manager = TrainDataManager(model, lr, args.batchSize, args.epochs)
 
     criterion = criterion()
     optimizer = buildOptimizer(optimizer, model.parameters(), lr)
     scheduler = optim.lr_scheduler.ReduceLROnPlateau(optimizer, patience=args.patience, verbose=True)
-    loss_visualizer = LossVisualizer("{}, {}, {} channels, SR={}".format(
-        args.model, 
-        args.dataset,
-        channels,
-        args.sampleRate
-    ))
-
-    accuracy_visualizer = AccuracyVisualizer("{}, {}, {} channels, SR={}".format(
-        args.model, 
-        args.dataset,
-        channels,
-        args.sampleRate
-    ))
 
     epoch_loss = 0
     for epoch in range(0, args.epochs):
         epoch_loss = train(model, loader.transform, criterion, optimizer, scheduler, epoch, loader.train_loader, device)
-        accuracy = test(model, loader.transform, epoch, loader.test_loader, device, verbose=args.verbose, labels=loader.labels)
-        loss_visualizer.append(epoch, epoch_loss)
-        accuracy_visualizer.append(epoch, accuracy)
+        accuracy_test, macros = test(model, loader.transform, epoch, loader.test_loader, device, verbose=args.verbose, labels=loader.labels)
+        accuracy_train, _ = test(model, loader.transform, epoch, loader.train_loader, device, verbose=args.verbose)
 
-    model.save_model(args.epochs)
+        manager.append_epoch(epoch, epoch_loss, accuracy_train, accuracy_test, macros['precision'], macros['recall'], macros['f1-score'])
+
+    manager.save_model()
