@@ -4,6 +4,7 @@ import json
 import os
 import errno
 from torchinfo import summary
+from modules.models import loadModel
 from csv import writer
 
 alphabet = string.ascii_lowercase + string.digits
@@ -68,5 +69,32 @@ class TrainDataManager:
 
 
 class ModelManager:
-    def __init__(self):
-        pass
+    def __init__(self, model_directory="models"):
+        self.models = self.init_models(model_directory)
+
+    def init_models(self, model_directory):
+        res = {}
+        for idx, subdir in enumerate(os.listdir(model_directory)):
+            model_path = os.path.join(model_directory, subdir, "model.pt")
+            with open(os.path.join(model_directory, subdir, "metadata.json")) as data_file:
+                metadata = json.load(data_file)
+                metadata['model_path'] = model_path
+                res[idx] = metadata
+
+        return res
+
+    def __str__(self):
+        return json.dumps(self.models, indent=2)
+
+    def load_model(self, index, sample_rate, device):
+        metadata = self.models[index]
+        return loadModel(
+                metadata['model_path'], 
+                metadata['model_type'],
+                metadata['dataset'],
+                metadata['batch_size'],
+                sample_rate,
+                metadata['channels'],
+                device)
+
+

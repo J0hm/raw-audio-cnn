@@ -185,9 +185,7 @@ def loadModelInfer(model_name, batch_size, sample_rate, device, model_folder="mo
 
     return (model, data)
 
-def loadModel(model_path, model_type, dataset_type, batch_size, sample_rate, channels, device, model_folder="models"):
-    path = os.path.join(model_folder, model_path)
-    
+def loadModel(model_path, model_type, dataset_type, batch_size, sample_rate, channels, device):
     # constrct the data loader from the given parameters
     data = loaders[dataset_type](device, batch_size, sample_rate)
 
@@ -199,7 +197,7 @@ def loadModel(model_path, model_type, dataset_type, batch_size, sample_rate, cha
             n_channel=channels
         )
 
-    model.load_state_dict(torch.load(path, map_location=torch.device(device)))
+    model.load_state_dict(torch.load(model_path, map_location=torch.device(device)))
     model.eval()
 
     return (model, data)
