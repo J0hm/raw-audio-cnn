@@ -27,6 +27,8 @@ parser.add_argument("-r", "--sampleRate", help="Sample rate to resample to.", ty
 parser.add_argument("-c", "--channels", help="Number of channels to use.", type=int)
 parser.add_argument("-p", "--patience", help="Number of epochs to wait before reducing LR on plateau", type=int, default=5)
 parser.add_argument("-v", "--verbose", help="Enables extra logging.", action="store_true")
+parser.add_argument("-v2", "--verbose2", help="Enables extra logging and visdom.", action="store_true")
+
 
 def buildOptimizer(optim_type, params, lr):
     if optim_type == "SGD":
@@ -72,25 +74,41 @@ if __name__ == '__main__':
     criterion = criterion()
     optimizer = buildOptimizer(optimizer, model.parameters(), lr)
     scheduler = optim.lr_scheduler.ReduceLROnPlateau(optimizer, patience=args.patience, verbose=True)
-    loss_visualizer = LossVisualizer("{}, {}, {} channels, SR={}".format(
-        args.model, 
-        args.dataset,
-        channels,
-        args.sampleRate
-    ))
 
-    accuracy_visualizer = AccuracyVisualizer("{}, {}, {} channels, SR={}".format(
-        args.model, 
-        args.dataset,
-        channels,
-        args.sampleRate
-    ))
+    loss_visualizer, accuracy_visualizer, train_accuracy_visualizer = None,None,None
+    if(args.verbose2):
+        loss_visualizer = LossVisualizer("{}, {}, {} channels, SR={}".format(
+            args.model, 
+            args.dataset,
+            channels,
+            args.sampleRate
+        ))
+
+        accuracy_visualizer = AccuracyVisualizer("{}, {}, {} channels, SR={}".format(
+            args.model, 
+            args.dataset,
+            channels,
+            args.sampleRate
+        ))
+
+        train_accuracy_visualizer = AccuracyVisualizer("Train accuracy {}, {}, {} channels, SR={}".format(
+            args.model, 
+            args.dataset,
+            channels,
+            args.sampleRate
+        ))
+
+
 
     epoch_loss = 0
     for epoch in range(0, args.epochs):
         epoch_loss = train(model, loader.transform, criterion, optimizer, scheduler, epoch, loader.train_loader, device)
         accuracy = test(model, loader.transform, epoch, loader.test_loader, device, verbose=args.verbose, labels=loader.labels)
-        loss_visualizer.append(epoch, epoch_loss)
-        accuracy_visualizer.append(epoch, accuracy)
+        accuracy_train = test(model, loader.transform, epoch, loader.train_loader, device, verbose=args.verbose)
+
+        if(loss_visualizer and accuracy_visualizer and train_accuracy_visualizer):
+            loss_visualizer.append(epoch, epoch_loss)
+            accuracy_visualizer.append(epoch, accuracy)
+            train_accuracy_visualizer.append(epoch, accuracy_train)
 
     model.save_model(args.epochs)
