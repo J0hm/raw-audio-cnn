@@ -4,6 +4,7 @@ import torch.nn as nn
 import torch.optim as optim
 from modules.models import VGG16, M5, M11, M18
 from modules.train import train, test
+from modules.data_management import TrainDataManager
 import modules.datasets as datasets
 
 default_settings = {
@@ -66,8 +67,10 @@ if __name__ == '__main__':
         )
 
     model.to(device)
-    print(model)
-    print("Number of parameters:", model.count_params())
+    #print(model)
+    #print("Number of parameters:", model.count_params())
+    
+    manager = TrainDataManager(model, lr, args.batchSize, args.epochs)
 
     criterion = criterion()
     optimizer = buildOptimizer(optimizer, model.parameters(), lr)
@@ -79,4 +82,6 @@ if __name__ == '__main__':
         accuracy = test(model, loader.transform, epoch, loader.test_loader, device, verbose=args.verbose, labels=loader.labels)
         accuracy_train = test(model, loader.transform, epoch, loader.train_loader, device, verbose=args.verbose)
 
-    model.save_model(args.epochs)
+        manager.append_epoch(epoch, epoch_loss, accuracy_train, 0, accuracy, 0, 0, 0)
+
+    manager.save_model()

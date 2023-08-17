@@ -33,23 +33,18 @@ def vgg_fc_layer(size_in, size_out, dropout=True):
 
 
 class AbstractModel(nn.Module):
-    def __init__(self, modeltype, dataset, identifier, n_channel):
+    def __init__(self, modeltype, dataset, identifier, in_shape, n_channel):
         super(AbstractModel, self).__init__()
         self.modeltype = modeltype
         self.n_channel = n_channel
         self.dataset = dataset
         self.identifier = identifier
+        self.in_shape = in_shape
 
-    def save_model(self, epoch=None, path="models"):
-        name = "{}_{}_{}_{}.pt".format(self.modeltype, self.dataset, self.n_channel, self.identifier)
-        if(epoch):
-            name = "{}_{}_{}_{}_{}.pt".format(self.modeltype, self.dataset, self.n_channel, epoch, self.identifier)
-
+    def save_model(self, name, path="models"):
         torch.save(self.state_dict(), os.path.join(path, name))
 
-    def save_checkpoint(self, optimizer, epoch, loss, path="models"):
-        name = "{}_{}_{}_{}_{}_ckpt.pt".format(self.modeltype, self.dataset, self.n_channel, epoch, self.identifier)
-        
+    def save_checkpoint(self, optimizer, epoch, loss, name, path="models"):
         torch.save({
             'epoch': epoch,
             'model_state_dict': self.state_dict(),
@@ -64,7 +59,7 @@ class AbstractModel(nn.Module):
 
 class VGG16(AbstractModel):
     def __init__(self, dataset, identifier, input_shape, n_output=35, n_channel=64):
-        super().__init__("vgg16", dataset, identifier, n_channel)
+        super().__init__("vgg16", dataset, identifier, input_shape, n_channel)
         self.fc_channel_mul = round((input_shape[1]+1)/1000)-1 # dont worry about this voodoo magic
         self.features = nn.Sequential(
             vgg_conv_block([input_shape[0],n_channel], [n_channel,n_channel], [80,3], [1,1], [1,1], 4, 4),
@@ -91,7 +86,7 @@ class VGG16(AbstractModel):
 
 class M5(AbstractModel):
     def __init__(self, dataset, identifier, input_shape, n_output=35, stride=4, n_channel=128):
-        super().__init__("m5", dataset, identifier, n_channel)
+        super().__init__("m5", dataset, identifier, input_shape, n_channel)
 
         self.features = nn.Sequential(
             vgg_conv_block([input_shape[0]], [n_channel], [80], [38], [stride], 4, 4),
@@ -112,7 +107,7 @@ class M5(AbstractModel):
 
 class M11(AbstractModel):
     def __init__(self, dataset, identifier, input_shape, n_output=35, stride=4, n_channel=64):
-        super().__init__("m11", dataset, identifier, n_channel) 
+        super().__init__("m11", dataset, identifier, input_shape, n_channel) 
         self.features = nn.Sequential(
             vgg_conv_block([input_shape[0]], [n_channel], [80], [38], [stride], 4, 4),
             vgg_conv_block([n_channel, n_channel], [n_channel, n_channel], [3, 3], [1, 1], [1, 1], 4, 4),
@@ -133,7 +128,7 @@ class M11(AbstractModel):
 
 class M18(AbstractModel):
     def __init__(self, dataset, identifier, input_shape, n_output=35, stride=4, n_channel=64):
-        super().__init__("m18", dataset, identifier, n_channel)
+        super().__init__("m18", dataset, identifier, input_shape, n_channel)
         self.features = nn.Sequential(
             vgg_conv_block([input_shape[0]], [n_channel], [80], [38], [stride], 4, 4),
             vgg_conv_block([n_channel]*4, [n_channel]*4, [3]*4, [1]*4, [1]*4, 4, 4),
