@@ -5,7 +5,7 @@ import os
 import errno
 from torchinfo import summary
 from modules.models import loadModel
-from csv import writer
+from csv import reader, writer
 
 alphabet = string.ascii_lowercase + string.digits
 
@@ -71,14 +71,16 @@ class TrainDataManager:
 class ModelManager:
     def __init__(self, model_directory="models"):
         self.models = self.init_models(model_directory)
+        self.train_data_keys = ['loss', 'train_accuracy', 'test_accuracy', 'precision', 'recall', 'f1']
 
     def init_models(self, model_directory):
         res = {}
         for idx, subdir in enumerate(os.listdir(model_directory)):
-            model_path = os.path.join(model_directory, subdir, "model.pt")
+            model_path = os.path.join(model_directory, subdir)
             with open(os.path.join(model_directory, subdir, "metadata.json")) as data_file:
                 metadata = json.load(data_file)
                 metadata['model_path'] = model_path
+                metadata['model_id'] = subdir
                 res[idx] = metadata
 
         return res
@@ -89,12 +91,26 @@ class ModelManager:
     def load_model(self, index, sample_rate, device):
         metadata = self.models[index]
         return loadModel(
-                metadata['model_path'], 
+                os.path.join(metadata['model_path'], "model.pt"), 
                 metadata['model_type'],
                 metadata['dataset'],
                 metadata['batch_size'],
                 sample_rate,
                 metadata['channels'],
                 device)
+    
+    def get_key_index(self, key):
+        return self.train_data_keys.index(key)+1
+
+    # returns the column for key
+    def get_model_data(self, model_index, key="loss"):
+        res = []
+        with open(os.path.join(self.models[model_index]['model_path'], "trainstats.csv")) as csv_file:
+            r = reader(csv_file)
+            for row in r:
+                data = float(row[self.get_key_index(key)])
+                res.append(data)
+
+        return res
 
 
