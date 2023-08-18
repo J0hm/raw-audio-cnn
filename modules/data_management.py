@@ -113,4 +113,25 @@ class ModelManager:
 
         return res
 
+    # returns a list of indicies for filtered models
+    # parameters set to none are ignored
+    def filter_models(self, dataset, epochs=None, batch_size=None, lr=None, channels=None, model_type=None):
+        def f(entry):
+            _, data = entry
+            if(data['dataset'] != dataset):
+                return False
+            elif(epochs and data['epochs'] != epochs):
+                return False
+            elif(batch_size and data['batch_size'] != batch_size):
+                return False
+            elif(lr and data['lr'] != lr):
+                return False
+            elif(channels and data['channels'] != channels):
+                return False
+            elif(model_type and data['model_type'] != model_type):
+                return False
+
+            return True
+
+        return [idx for idx, _ in filter(f, self.models.items())]
 
