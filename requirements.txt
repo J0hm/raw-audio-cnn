@@ -1,11 +1,11 @@
-pytorch
-tensorflow
-torchaudio
-torchvision
+torch==2.0.1
+tensorflow=2.13.0
+torchaudio=2.0.2
+torchvision=0.15.2
+torchinfo=1.8.0
 librosa
 numpy
 tqdm
 pandas
 visdom
 pydub
-torchinfo
