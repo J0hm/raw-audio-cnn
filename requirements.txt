@@ -1,4 +1,4 @@
-torch==2.0.1
+pytorch==2.0.1
 tensorflow
 torchaudio
 torchvision
