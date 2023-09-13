@@ -67,7 +67,7 @@ class SCLoader():
         def collate_fn(batch):
             tensors, targets = [], []
     
-            # encode labels as indices
+            # encode labels as indice
             for waveform, _, label, *_ in batch:
                 tensors += [waveform]
                 targets += [torch.tensor(self.labels.index(label))]
@@ -172,10 +172,10 @@ class MammalLoader():
         print("Labels: {}".format(self.labels))
         waveform, _ = self.__train_set.__getitem__(0)
         self.transform = torchaudio.transforms.Resample(orig_freq=22050, new_freq=new_SR)
-        self.transform.to(device)
         transformed = self.transform(waveform)
         self.input_shape = transformed.shape
         print("Input shape: {}, {} sps".format(self.input_shape, new_SR))
+        self.transform.to(device)
 
         if device == "cuda":
             num_workers = 1
