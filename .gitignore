@@ -3,3 +3,6 @@ SpeechCommands/
 __pycache__
 modules/__pycache__/*
 marineaudio/datasets
+graphs/
+model*/
+*temp*
