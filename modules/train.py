@@ -1,6 +1,7 @@
 from tqdm import tqdm
 from sklearn import metrics
 import numpy
+import torch
 
 def train(model, transform, criterion, optimizer, scheduler, epoch, loader, device, verbose=False, log_interval=10):
     model.train()
@@ -40,6 +41,8 @@ def number_of_correct(pred, target):
 
 def get_likely_index(tensor):
     # find most likely label index for each element in the batch
+    s, _ = torch.sort(tensor)
+    print(s)
     return tensor.argmax(dim=-1)
 
 def test(model, transform, epoch, loader, device, verbose=False, labels=None):

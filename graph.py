@@ -15,8 +15,8 @@ def plotModels(models, key, label_func=lambda model : manager.models[model]['mod
 
 
 if __name__ == '__main__':
-    models = manager.filter_models('marine', epochs=120, batch_size=32, lr=0.001, model_type='m18')
+    models = manager.filter_models('sc', epochs=120, batch_size=256, lr=0.001, channels=32)
     plotModels(models, 'f1', 
-               label_func=lambda model : "{}, {} channels".format(manager.models[model]['model_type'], manager.models[model]['channels']))
+               label_func=lambda model : "{}, {} channels, {} params".format(manager.models[model]['model_type'], manager.models[model]['channels'], manager.models[model]['parameters']))
     plt.legend()
     plt.show()

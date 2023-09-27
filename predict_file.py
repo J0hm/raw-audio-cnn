@@ -30,7 +30,9 @@ def get_batches(samples, batch_size=32):
         # in theory this should work - why does it not? predictions are not the same?
         # how are pydub.AudioSegment.export and torchaudio.load implemented?
         # error has to do somethin with normalization... might just be easier to take the main file
-        # load that and then split by samples, after being normalized    
+        # load that and then split by samples, after being normalized   
+        # not the fastest: but i think reimplementing torchaudio load and AudioSegment.export is not ideal
+
        
 
         s.export("temp.wav", format="wav")
