@@ -2,10 +2,7 @@ import argparse
 import torch
 import torch.nn as nn
 import torch.optim as optim
-from modules.models import VGG16, M5, M11, M18
-from modules.train import train, test
-from modules.data_management import TrainDataManager
-import modules.datasets as datasets
+from rac import VGG16, M5, M11, M18, train, test, TrainDataManager, datasets
 
 default_settings = {
         # [model, criterion, optimizer, n_channel, learning_rate]

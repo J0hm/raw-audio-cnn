@@ -1,8 +1,7 @@
 import torch
 import argparse
 import sys
-from modules.data_management import ModelManager
-from modules.train import test
+from rac import ModelManager, test
 
 #infer and batch modes
 parser = argparse.ArgumentParser()

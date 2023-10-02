@@ -2,7 +2,7 @@ import pydub
 import torchaudio
 import torch
 from pydub.audio_segment import audioop, wave
-from modules.data_management import ModelManager
+from rac import ModelManager
 
 
 sample_len = 1 # seconds per sample

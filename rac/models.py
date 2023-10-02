@@ -1,8 +1,7 @@
-import os
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-from modules.data_loader import SCLoader, MammalLoader
+from .data_loader import SCLoader, MammalLoader
 
 
 def conv_layer(chann_in, chann_out, k_size, p_size, stride):

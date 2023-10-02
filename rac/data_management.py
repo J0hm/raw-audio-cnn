@@ -4,7 +4,7 @@ import json
 import os
 import errno
 from torchinfo import summary
-from modules.models import loadModel
+from .models import loadModel
 from csv import reader, writer
 
 alphabet = string.ascii_lowercase + string.digits

@@ -1,4 +1,4 @@
-from modules.data_management import ModelManager
+from rac import ModelManager
 
 
 manager = ModelManager()
