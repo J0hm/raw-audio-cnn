@@ -15,7 +15,10 @@ def plotModels(models, key, label_func=lambda model : manager.models[model]['mod
 
 
 if __name__ == '__main__':
-    models = manager.filter_models('sc', epochs=120, batch_size=256, lr=0.001, channels=32)
+    # params: dataset, epochs, batch_size, lr, channels, model_type
+    models = manager.filter_models('sc', epochs=120)
+
+    # keys: loss, train_accuracy, test_accuracy, precision, recall, f1
     plotModels(models, 'f1', 
                label_func=lambda model : "{}, {} channels, {} params".format(manager.models[model]['model_type'], manager.models[model]['channels'], manager.models[model]['parameters']))
     plt.legend()
